@@ -14,6 +14,10 @@ import calendar
 # df = pd.read_csv("ruta_a_tus_datos.csv", encoding="latin1")
 
 # Asegurarse de que las fechas estén en formato datetime
+
+
+
+
 df = pd.read_csv("Solo_TIC2023-2005.csv", encoding="latin1")
 
 df['Fecha de inicio del contrato'] = pd.to_datetime(df['Fecha de inicio del contrato'], dayfirst=True, errors='coerce')
@@ -41,6 +45,7 @@ orden_gobierno_list = df['Orden de gobierno'].dropna().unique() if 'Orden de gob
 
 # Crear la aplicación Dash
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
+server = app.server 
 
 # Definición de pestañas
 app.layout = html.Div([
