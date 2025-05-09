@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python Virtual Environment
+venv/
+env/
+.venv/
+# Si usas un nombre diferente para tu entorno virtual, añádelo aquí
+
+# Archivos de configuración de VS Code (ya que lo usas)
+.vscode/
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Si generas logs localmente que no quieres subir
+*.log
+
+# Archivos temporales de algunos editores
+*~
+*.swp
+*.swo
