@@ -102,7 +102,7 @@ app.layout = html.Div([
                 ],
                 value='tic'  # Cambiado a 'tic' para enfocarse en contratos TIC por defecto
             ),
-        ], style={'width': '23%', 'display': 'inline-block', 'margin-right': '2%'}),
+        ], style={'width': '31%', 'display': 'inline-block', 'margin-right': '2%'}), # Ajustado el ancho
 
         html.Div([
             html.Label("Seleccionar Institución"),
@@ -112,7 +112,7 @@ app.layout = html.Div([
                 multi=True,
                 value=[]
             ),
-        ], style={'width': '23%', 'display': 'inline-block', 'margin-right': '2%'}),
+        ], style={'width': '31%', 'display': 'inline-block', 'margin-right': '2%'}), # Ajustado el ancho
 
         html.Div([
             html.Label("Orden de Gobierno"),
@@ -122,23 +122,23 @@ app.layout = html.Div([
                 multi=True,
                 value=[]
             ),
-        ], style={'width': '23%', 'display': 'inline-block', 'margin-right': '2%'}),
-
-        html.Div([
-            html.Label("Rango de Importes (MXN)"),
-            dcc.RangeSlider(
-                id='importe-slider',
-                min=0,
-                # Usar df['Importe DRC'].min() si quieres que el mínimo sea dinámico y no siempre 0
-                max=round(df['Importe DRC'].max()) if 'Importe DRC' in df.columns and not df['Importe DRC'].empty else 1000000,
-                step=100000,
-                marks={i: f"${i/1000000:.1f}M" for i in range(0,
-                    int(round(df['Importe DRC'].max())) if 'Importe DRC' in df.columns and not df['Importe DRC'].empty else 1000000,
-                    1000000 if ('Importe DRC' in df.columns and not df['Importe DRC'].empty and round(df['Importe DRC'].max()) > 1000000) else 200000 # Ajustar step de marks si el max es pequeño
-                )},
-                value=[0, round(df['Importe DRC'].max()) if 'Importe DRC' in df.columns and not df['Importe DRC'].empty else 1000000]
-            ),
-        ], style={'width': '23%', 'display': 'inline-block'}),
+        ], style={'width': '31%', 'display': 'inline-block'}), # Ajustado el ancho, sin margin-right para el último
+        
+        # ELIMINADO EL DIV DEL RANGO DE IMPORTES
+        # html.Div([
+        #     html.Label("Rango de Importes (MXN)"),
+        #     dcc.RangeSlider(
+        #         id='importe-slider',
+        #         min=0,
+        #         max=round(df['Importe DRC'].max()) if 'Importe DRC' in df.columns and not df['Importe DRC'].empty else 1000000,
+        #         step=100000,
+        #         marks={i: f"${i/1000000:.1f}M" for i in range(0,
+        #             int(round(df['Importe DRC'].max())) if 'Importe DRC' in df.columns and not df['Importe DRC'].empty else 1000000,
+        #             1000000 if ('Importe DRC' in df.columns and not df['Importe DRC'].empty and round(df['Importe DRC'].max()) > 1000000) else 200000 
+        #         )},
+        #         value=[0, round(df['Importe DRC'].max()) if 'Importe DRC' in df.columns and not df['Importe DRC'].empty else 1000000]
+        #     ),
+        # ], style={'width': '23%', 'display': 'inline-block'}),
     ], style={'margin-bottom': '20px', 'backgroundColor': '#f9f9f9', 'padding': '15px', 'borderRadius': '5px'}),
 
     # Pestañas
@@ -148,8 +148,7 @@ app.layout = html.Div([
         dcc.Tab(label='Análisis Competitivo', value='tab-3'),
         dcc.Tab(label='Distribución Geográfica', value='tab-4'),
         dcc.Tab(label='Análisis de Términos TIC', value='tab-5'),
-        # dcc.Tab(label='Análisis de Proveedores', value='tab-6'),
-        dcc.Tab(label='Redes de Contratacion', value='tab-network'), # Redes de Concentracion
+        dcc.Tab(label='Redes de Contratacion', value='tab-network'),
     ], style={'margin-bottom': '20px'}),
 
     # Contenido de pestañas
@@ -164,215 +163,168 @@ app.layout = html.Div([
 def render_tab_content(tab):
     if tab == 'tab-1':
         return html.Div([
-            # Métricas generales
             html.Div([
                 html.Div(id='metric-tic-percentage', className='metric-box'),
                 html.Div(id='metric-total-contratos', className='metric-box'),
                 html.Div(id='metric-avg-importe', className='metric-box'),
                 html.Div(id='metric-total-value', className='metric-box'),
             ], style={'display': 'flex', 'justify-content': 'space-between', 'margin-bottom': '20px'}),
-
-            # Tendencias principales
             html.Div([
                 html.Div([
                     html.H3("Evolución de Contratos TIC por Año"),
                     dcc.Graph(id='tic-trend-graph'),
                 ], style={'width': '49%', 'display': 'inline-block'}),
-
                 html.Div([
                     html.H3("Crecimiento de Importe por Categoría"),
                     dcc.Graph(id='importe-growth-graph'),
                 ], style={'width': '49%', 'display': 'inline-block', 'float': 'right'}),
             ], style={'margin-bottom': '20px'}),
-
             html.Div([
                 html.H3("Inversión TIC Mensual (Estacionalidad)"),
                 dcc.Graph(id='seasonality-graph'),
             ], style={'margin-bottom': '20px'}),
-
             html.Div([
                 html.H3("Top 10 Instituciones por Gasto en TIC"),
                 dcc.Graph(id='top-institutions-graph'),
             ], style={'margin-bottom': '20px'}),
         ])
-
-    elif tab == 'tab-2': # *** PESTAÑA MODIFICADA ***
+    elif tab == 'tab-2':
         return html.Div([
-            # Row 1: Graphs
             html.Div([ 
-                html.Div([ # Left Graph
+                html.Div([
                     html.H3("Oportunidades por Proximidad de Vencimiento"),
                     dcc.Graph(id='opportunities-expiry-graph'),
                 ], style={'width': '49%', 'display': 'inline-block', 'vertical-align': 'top'}),
-
-                html.Div([ # Right Graph
+                html.Div([
                     html.H3("Valor de Contratos Próximos a Vencer"),
                     dcc.Graph(id='value-expiry-graph'),
                 ], style={'width': '49%', 'display': 'inline-block', 'float': 'right', 'vertical-align': 'top'}),
             ], style={'margin-bottom': '20px', 'overflow': 'hidden'}),
-
-            # Row 2: Table for contracts from clicked bar in 'opportunities-expiry-graph'
             html.Div(id='opportunity-category-contracts-table-container', 
-                     style={'margin-top': '20px', 'margin-bottom': '20px', 'clear': 'both'}), # NUEVO DIV PARA LA TABLA
-
-            # Row 3: Timeline graph
+                     style={'margin-top': '20px', 'margin-bottom': '20px', 'clear': 'both'}),
             html.Div([
                 html.H3("Línea de Tiempo de Vencimientos de Contratos TIC"),
                 dcc.Graph(id='timeline-graph'),
             ], style={'margin-bottom': '20px'}),
-
-            # Row 4: Existing general opportunity table
             html.Div([
                 html.H3("Contratos Próximos a Vencer (Oportunidades de Renovación)"),
                 html.Div(id='opportunity-table-container')
             ]),
         ])
-
-
     elif tab == 'tab-3':
         return html.Div([
-            # Fila 1: Gráfica de Market Share y Gráfica de Especialización
             html.Div([
-                html.Div([ # Columna Izquierda
+                html.Div([
                     html.H3("Market Share de Proveedores TIC"),
                     dcc.Graph(id='provider-share-graph'),
-                    # La tabla ya NO va aquí para que ocupe el ancho completo
-                ], style={'width': '49%', 'display': 'inline-block', 'vertical-align': 'top'}), # 'vertical-align': 'top' es útil
-
-                html.Div([ # Columna Derecha
+                ], style={'width': '49%', 'display': 'inline-block', 'vertical-align': 'top'}),
+                html.Div([
                     html.H3("Especialización de Proveedores"),
                     dcc.Graph(id='provider-specialization-graph'),
                 ], style={'width': '49%', 'display': 'inline-block', 'float': 'right', 'vertical-align': 'top'}),
-            ], style={'margin-bottom': '20px', 'overflow': 'hidden'}), # 'overflow': 'hidden' para contener los floats
-
-            # Fila 2: Tabla de Contratos del Proveedor (ocupando el ancho completo)
+            ], style={'margin-bottom': '20px', 'overflow': 'hidden'}),
             html.Div(
                 id='provider-contracts-table-container',
-                style={'width': '100%', 'margin-top': '20px'} # Asegura que ocupe el ancho y tenga un margen
+                style={'width': '100%', 'margin-top': '20px'}
             ),
-
-            # Fila 3: Gráfica de Duración Promedio
             html.Div([
                 html.H3("Duración Promedio de Contratos por Proveedor"),
                 dcc.Graph(id='contract-duration-graph'),
-            ], style={'margin-bottom': '20px', 'clear': 'both'}), # 'clear': 'both' por si acaso
-
-            # Fila 4: Tabla de Análisis de Competidores
+            ], style={'margin-bottom': '20px', 'clear': 'both'}),
             html.Div([
                 html.H3("Análisis de Competidores"),
-                html.Div(id='competitor-table-container') # Esta ya debería ocupar el ancho completo por defecto
+                html.Div(id='competitor-table-container')
             ]),
         ])
-
     elif tab == 'tab-4':
         return html.Div([
             html.Div([
                 html.H3("Distribución Geográfica de Contratos TIC"),
                 dcc.Graph(id='geo-distribution-graph'),
             ], style={'margin-bottom': '20px'}),
-
             html.Div([
                 html.Div([
                     html.H3("Gasto TIC por Orden de Gobierno"),
                     dcc.Graph(id='government-level-graph'),
                 ], style={'width': '49%', 'display': 'inline-block'}),
-
                 html.Div([
                     html.H3("Tipo de Procedimiento por Región"),
                     dcc.Graph(id='procedure-type-graph'),
                 ], style={'width': '49%', 'display': 'inline-block', 'float': 'right'}),
             ], style={'margin-bottom': '20px'}),
         ])
-
     elif tab == 'tab-5':
         return html.Div([
-            # Fila 1: Gráfico de Top Términos y Gráfico de Tendencias de Términos
             html.Div([
                 html.Div([
                     html.H3("Top Términos TIC Encontrados"),
                     dcc.Graph(id='top-terms-graph'),
-                    # El html.Div(id='term-contracts-table-container') YA NO VA AQUÍ
                 ], style={'width': '49%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-
                 html.Div([
                     html.H3("Tendencias de Términos TIC por Año"),
                     dcc.Graph(id='terms-trend-graph'),
                 ], style={'width': '49%', 'display': 'inline-block', 'float': 'right', 'verticalAlign': 'top'}),
-            ], style={'margin-bottom': '20px', 'overflow': 'hidden'}), # Contenedor para la primera fila de gráficos
-
-            # Fila 2: Contenedor para la tabla de contratos del término seleccionado (ocupará el ancho completo)
+            ], style={'margin-bottom': '20px', 'overflow': 'hidden'}),
             html.Div(
                 id='term-contracts-table-container',
-                style={'width': '100%', 'margin-top': '20px', 'margin-bottom': '20px'} # Asegura que ocupe el ancho y tenga margen
+                style={'width': '100%', 'margin-top': '20px', 'margin-bottom': '20px'}
             ),
-
-            # Fila 3: Gráfico de Co-ocurrencia y Gráfico de Valor Promedio
             html.Div([
                 html.Div([
                     html.H3("Co-ocurrencia de Términos"),
                     dcc.Graph(id='term-cooccurrence-graph'),
                 ], style={'width': '49%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-
                 html.Div([
                     html.H3("Valor Promedio de Contratos por Término TIC"),
                     dcc.Graph(id='term-value-graph'),
                 ], style={'width': '49%', 'display': 'inline-block', 'float': 'right', 'verticalAlign': 'top'}),
-            ], style={'margin-bottom': '20px', 'clear': 'both', 'overflow': 'hidden'}), # Contenedor para la segunda fila de gráficos
+            ], style={'margin-bottom': '20px', 'clear': 'both', 'overflow': 'hidden'}),
         ])
-
     elif tab == 'tab-network':
         return html.Div([
             html.H3("Redes de Relaciones Proveedor-Institución"),
-            dcc.Graph(id='network-graph', style={'height': '700px'}), # Aumentar altura si es necesario
+            dcc.Graph(id='network-graph', style={'height': '700px'}),
             html.P("Visualiza que proveedores contratan con que insituciones. El tamaño del enlace representa el valor total de los contratos entre ellos (Top 50 relaciones mostradas)."),
         ])
 
-# Función auxiliar para filtrar datos
-def filter_dataframe(df_original, tic_filter, selected_siglas, selected_gobierno, importe_range):
-    # Asegurarse de que df_original no sea None y sea un DataFrame
+# Función auxiliar para filtrar datos MODIFICADA
+def filter_dataframe(df_original, tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
     if df_original is None or not isinstance(df_original, pd.DataFrame):
-        return pd.DataFrame() # Devuelve un DataFrame vacío si la entrada no es válida
+        return pd.DataFrame() 
 
     filtered_df = df_original.copy()
 
-    # Filtrar por clasificación TIC (asegurarse de que 'es_TIC' exista)
     if 'es_TIC' in filtered_df.columns:
         if tic_filter == 'tic':
             filtered_df = filtered_df[filtered_df['es_TIC'] == True]
         elif tic_filter == 'no_tic':
             filtered_df = filtered_df[filtered_df['es_TIC'] == False]
-        # Si es 'todos', no se aplica filtro por 'es_TIC'
-    elif tic_filter != 'todos': # Si se espera filtrar por TIC pero la columna no existe
+    elif tic_filter != 'todos':
         print(f"Advertencia: La columna 'es_TIC' no existe, no se puede filtrar por clasificación TIC '{tic_filter}'.")
-        return pd.DataFrame() # Podría ser mejor devolver df vacío si el filtro es crucial
+        return pd.DataFrame()
 
-
-    # Filtrar por siglas de institución
     if 'Siglas de la Institución' in filtered_df.columns and selected_siglas and len(selected_siglas) > 0:
         filtered_df = filtered_df[filtered_df['Siglas de la Institución'].isin(selected_siglas)]
-    elif selected_siglas and len(selected_siglas) > 0: # Si hay selección pero la columna no existe
+    elif selected_siglas and len(selected_siglas) > 0:
         print("Advertencia: La columna 'Siglas de la Institución' no existe, no se puede filtrar por institución.")
 
-
-    # Filtrar por orden de gobierno
     if 'Orden de gobierno' in filtered_df.columns and selected_gobierno and len(selected_gobierno) > 0:
         filtered_df = filtered_df[filtered_df['Orden de gobierno'].isin(selected_gobierno)]
     elif selected_gobierno and len(selected_gobierno) > 0:
         print("Advertencia: La columna 'Orden de gobierno' no existe, no se puede filtrar por orden de gobierno.")
 
-
-    # Filtrar por rango de importe
-    if 'Importe DRC' in filtered_df.columns and importe_range:
-        filtered_df = filtered_df[
-            (filtered_df['Importe DRC'] >= importe_range[0]) &
-            (filtered_df['Importe DRC'] <= importe_range[1])
-        ]
-    elif importe_range and ('Importe DRC' not in filtered_df.columns):
-         print("Advertencia: La columna 'Importe DRC' no existe, no se puede filtrar por importe.")
+    # ELIMINADO EL BLOQUE DE FILTRADO POR IMPORTE
+    # if 'Importe DRC' in filtered_df.columns and importe_range:
+    #     filtered_df = filtered_df[
+    #         (filtered_df['Importe DRC'] >= importe_range[0]) &
+    #         (filtered_df['Importe DRC'] <= importe_range[1])
+    #     ]
+    # elif importe_range and ('Importe DRC' not in filtered_df.columns):
+    #      print("Advertencia: La columna 'Importe DRC' no existe, no se puede filtrar por importe.")
 
     return filtered_df
 
-# Callbacks para actualizar las visualizaciones de la pestaña 1: Resumen y Tendencias
+# Callbacks para actualizar las visualizaciones de la pestaña 1: Resumen y Tendencias MODIFICADO
 @app.callback(
     [Output('metric-tic-percentage', 'children'),
      Output('metric-total-contratos', 'children'),
@@ -384,13 +336,11 @@ def filter_dataframe(df_original, tic_filter, selected_siglas, selected_gobierno
      Output('top-institutions-graph', 'figure')],
     [Input('tic-dropdown', 'value'),
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
-    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, importe_range)
+def update_tab1(tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
+    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
 
-    # Si no hay datos después de filtrar
     if filtered_df.empty:
         empty_fig = go.Figure()
         empty_fig.update_layout(
@@ -399,15 +349,12 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
             yaxis=dict(title="", showgrid=False, zeroline=False, showticklabels=False),
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)"
         )
-
         metric_empty = html.Div([
             html.H4("Sin datos"),
             html.P("0")
         ], style={'textAlign': 'center', 'padding': '10px', 'background': '#f0f0f0', 'borderRadius': '5px', 'flex': '1', 'margin': '5px'})
-
         return metric_empty, metric_empty, metric_empty, metric_empty, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Métricas
     total_contratos = len(filtered_df)
     contratos_tic = 0
     if 'es_TIC' in filtered_df.columns:
@@ -420,19 +367,14 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
         avg_importe = filtered_df['Importe DRC'].mean()
         total_importe = filtered_df['Importe DRC'].sum()
 
-
-    # Gráfica de tendencia de contratos TIC por año
     fig_trend = go.Figure().update_layout(title="No hay datos para tendencia de contratos")
     if 'Fecha de inicio del contrato' in filtered_df.columns and 'Código del contrato' in filtered_df.columns and 'es_TIC' in filtered_df.columns:
-        # Asegurarse que la fecha de inicio no tenga NaT antes de agrupar
         yearly_df_prep = filtered_df.dropna(subset=['Fecha de inicio del contrato'])
         if not yearly_df_prep.empty:
             yearly_df = yearly_df_prep.groupby([yearly_df_prep['Fecha de inicio del contrato'].dt.year, 'es_TIC']).agg(
                 count=('Código del contrato', 'count'),
                 total_importe=('Importe DRC', 'sum') if 'Importe DRC' in filtered_df.columns else ('Código del contrato', 'count')
             ).reset_index().rename(columns={'Fecha de inicio del contrato': 'Año de inicio del contrato'})
-
-
             df_tic_trend = yearly_df[yearly_df['es_TIC'] == True]
             if not df_tic_trend.empty:
                 fig_trend = px.line(
@@ -446,19 +388,15 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 )
                 fig_trend.update_traces(line=dict(color='#2c3e50', width=3), marker=dict(size=10))
             else:
-                 fig_trend.update_layout(title="No hay contratos TIC para mostrar tendencia")
+                fig_trend.update_layout(title="No hay contratos TIC para mostrar tendencia")
         else:
             fig_trend.update_layout(title="No hay fechas válidas para mostrar tendencia")
 
-
-    # Gráfica de crecimiento de importe por categoría/año
     fig_growth = go.Figure().update_layout(title="No hay datos para crecimiento de importe")
     if 'Importe DRC' in filtered_df.columns and 'Fecha de inicio del contrato' in filtered_df.columns:
         growth_df_prep = filtered_df.dropna(subset=['Fecha de inicio del contrato', 'Importe DRC'])
         if not growth_df_prep.empty:
-            # Agrupar por año y una categoría relevante (por ejemplo, Tipo de contratación)
             group_col = 'Tipo de contratación' if 'Tipo de contratación' in growth_df_prep.columns else None
-            
             if group_col:
                 growth_df = growth_df_prep.groupby([growth_df_prep['Fecha de inicio del contrato'].dt.year, group_col])['Importe DRC'].sum().reset_index()
                 growth_df = growth_df.rename(columns={'Fecha de inicio del contrato': 'Año Contrato'})
@@ -474,7 +412,6 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 else:
                     fig_growth.update_layout(title=f"No hay datos para crecimiento de importe por {group_col}")
             else:
-                # Si no existe la columna de tipo de contratación, usar solo el total por año
                 growth_df = growth_df_prep.groupby(growth_df_prep['Fecha de inicio del contrato'].dt.year)['Importe DRC'].sum().reset_index()
                 growth_df = growth_df.rename(columns={'Fecha de inicio del contrato': 'Año Contrato'})
                 if not growth_df.empty:
@@ -490,8 +427,6 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
         else:
             fig_growth.update_layout(title="No hay fechas o importes válidos para mostrar crecimiento")
 
-
-    # Gráfica de estacionalidad (patrones mensuales)
     fig_season = go.Figure().update_layout(title="No hay datos para estacionalidad")
     if 'Fecha de inicio del contrato' in filtered_df.columns and 'Código del contrato' in filtered_df.columns:
         season_df_prep = filtered_df.dropna(subset=['Fecha de inicio del contrato'])
@@ -500,16 +435,11 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 count=('Código del contrato', 'count'),
                 total_importe=('Importe DRC', 'sum') if 'Importe DRC' in filtered_df.columns else ('Código del contrato', 'count')
             ).reset_index().rename(columns={'Fecha de inicio del contrato': 'Mes Numérico'})
-
-
-            # Asignar nombres de meses
             month_names = {i: calendar.month_name[i] for i in range(1, 13)}
             season_df['Mes'] = season_df['Mes Numérico'].map(month_names)
-            season_df = season_df.sort_values('Mes Numérico') # Ordenar por mes numérico
-
+            season_df = season_df.sort_values('Mes Numérico')
             y_col = 'total_importe' if 'total_importe' in season_df.columns and season_df['total_importe'].sum() > 0 else 'count'
             y_title = 'Importe Total (MXN)' if y_col == 'total_importe' else 'Número de Contratos'
-
             if not season_df.empty:
                 fig_season = px.bar(
                     season_df,
@@ -529,11 +459,8 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
         else:
             fig_season.update_layout(title="No hay fechas válidas para estacionalidad")
 
-
-    # Top 10 instituciones por gasto en TIC
     fig_top = go.Figure().update_layout(title="No hay datos para top instituciones")
     if 'Siglas de la Institución' in filtered_df.columns:
-        # Si tenemos importe, usamos esa columna para el ranking
         if 'Importe DRC' in filtered_df.columns and not filtered_df['Importe DRC'].dropna().empty:
             top_inst_prep = filtered_df.dropna(subset=['Siglas de la Institución', 'Importe DRC'])
             top_inst = top_inst_prep.groupby('Siglas de la Institución')['Importe DRC'].sum().reset_index()
@@ -550,8 +477,7 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 )
             else:
                 fig_top.update_layout(title="No hay datos de importe para top instituciones")
-
-        elif 'Código del contrato' in filtered_df.columns: # Si no tenemos importe, usamos el conteo de contratos
+        elif 'Código del contrato' in filtered_df.columns:
             top_inst_prep = filtered_df.dropna(subset=['Siglas de la Institución'])
             top_inst = top_inst_prep.groupby('Siglas de la Institución')['Código del contrato'].count().reset_index(name='count')
             top_inst = top_inst.sort_values('count', ascending=False).head(10)
@@ -570,7 +496,6 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
         else:
             fig_top.update_layout(title="Faltan columnas 'Importe DRC' o 'Código del contrato' para top instituciones")
 
-    # Formatear las métricas para mostrar
     metric_style = {'textAlign': 'center', 'padding': '10px', 'background': '#f0f0f0', 'borderRadius': '5px', 'flex': '1', 'margin': '5px'}
     metric_tic = html.Div([html.H4("Porcentaje TIC"), html.P(f"{porcentaje_tic:.1f}%")], style=metric_style)
     metric_total = html.Div([html.H4("Total Contratos"), html.P(f"{total_contratos:,}")], style=metric_style)
@@ -579,7 +504,7 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
 
     return metric_tic, metric_total, metric_avg, metric_total_value, fig_trend, fig_growth, fig_season, fig_top
 
-# Callbacks para actualizar las visualizaciones de la pestaña 2: Oportunidades de Negocio
+# Callbacks para actualizar las visualizaciones de la pestaña 2: Oportunidades de Negocio MODIFICADO
 @app.callback(
     [Output('opportunities-expiry-graph', 'figure'),
      Output('value-expiry-graph', 'figure'),
@@ -587,13 +512,11 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, importe_range):
      Output('opportunity-table-container', 'children')],
     [Input('tic-dropdown', 'value'),
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
-    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, importe_range)
+def update_tab2(tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
+    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
 
-    # Si no hay datos después de filtrar
     if filtered_df.empty:
         empty_fig = go.Figure()
         empty_fig.update_layout(
@@ -605,21 +528,16 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
         empty_table = html.Div("No hay datos para mostrar en la tabla.", style={'textAlign': 'center', 'padding': '20px'})
         return empty_fig, empty_fig, empty_fig, empty_table
 
-    # Oportunidades por proximidad de vencimiento
     fig_opp = go.Figure().update_layout(title="No hay datos de 'Oportunidad' para gráfico")
     if 'Oportunidad' in filtered_df.columns and 'Código del contrato' in filtered_df.columns:
         opp_counts = filtered_df.groupby('Oportunidad', observed=False)['Código del contrato'].count().reset_index(name='count')
         order = ['Vencido', 'Urgente (< 3 meses)', 'Corto plazo (3-6 meses)',
                  'Medio plazo (6-12 meses)', 'Largo plazo (> 12 meses)']
-        
-        #Asegurar que todas las categorias estén presentes
         for cat in order:
             if cat not in opp_counts['Oportunidad'].values:
                 opp_counts = pd.concat([opp_counts, pd.DataFrame({'Oportunidad': [cat], 'count': [0]})], ignore_index=True)
-        
         opp_counts['Oportunidad'] = pd.Categorical(opp_counts['Oportunidad'], categories=order, ordered=True)
         opp_counts = opp_counts.sort_values('Oportunidad')
-
         if not opp_counts.empty:
             fig_opp = px.bar(
                 opp_counts,
@@ -635,8 +553,6 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
         else:
             fig_opp.update_layout(title="No hay datos agregados para oportunidades por vencimiento")
 
-
-    # Valor de contratos próximos a vencer
     fig_value = go.Figure().update_layout(title="No hay datos de 'Importe DRC' u 'Oportunidad' para gráfico")
     if 'Oportunidad' in filtered_df.columns and 'Importe DRC' in filtered_df.columns:
         value_by_expiry_prep = filtered_df.dropna(subset=['Importe DRC'])
@@ -644,14 +560,11 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
             value_by_expiry = value_by_expiry_prep.groupby('Oportunidad', observed=False)['Importe DRC'].sum().reset_index()
             order = ['Vencido', 'Urgente (< 3 meses)', 'Corto plazo (3-6 meses)',
                      'Medio plazo (6-12 meses)', 'Largo plazo (> 12 meses)']
-
             for cat in order:
                 if cat not in value_by_expiry['Oportunidad'].values:
                     value_by_expiry = pd.concat([value_by_expiry, pd.DataFrame({'Oportunidad': [cat], 'Importe DRC': [0]})], ignore_index=True)
-
             value_by_expiry['Oportunidad'] = pd.Categorical(value_by_expiry['Oportunidad'], categories=order, ordered=True)
             value_by_expiry = value_by_expiry.sort_values('Oportunidad')
-
             if not value_by_expiry.empty:
                 fig_value = px.bar(value_by_expiry, x='Oportunidad', y='Importe DRC',
                                    title="Valor Total de Contratos por Proximidad de Vencimiento",
@@ -666,19 +579,14 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
         else:
             fig_value.update_layout(title="No hay importes válidos para valor por vencimiento")
 
-    # Línea de tiempo de vencimientos
     fig_timeline = go.Figure().update_layout(title="No hay datos para línea de tiempo de vencimientos")
     if 'Fecha de fin del contrato' in filtered_df.columns:
         now = datetime.now()
-        # Considerar contratos que vencen en el futuro o vencieron recientemente (ej. últimos 90 días)
         timeline_df_prep = filtered_df[
-            (filtered_df['Fecha de fin del contrato'] > now - timedelta(days=90)) & # Vencieron en los últimos 90 días
-            (filtered_df['Fecha de fin del contrato'].notna()) # Asegurar que la fecha no sea NaT
+            (filtered_df['Fecha de fin del contrato'] > now - timedelta(days=90)) &
+            (filtered_df['Fecha de fin del contrato'].notna())
         ].copy()
-
-
         if not timeline_df_prep.empty:
-            # Crear tooltip_info de forma segura
             def create_tooltip(row):
                 titulo = row.get('Título del contrato', 'N/A')
                 siglas = row.get('Siglas de la Institución', 'N/A')
@@ -686,15 +594,11 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 importe_val = row.get('Importe DRC', None)
                 importe_str = f"${importe_val:,.2f} MXN" if pd.notna(importe_val) else "Importe: N/A"
                 return f"Contrato: {titulo}<br>Institución: {siglas}<br>Proveedor: {proveedor}<br>{importe_str}"
-
             timeline_df_prep['tooltip_info'] = timeline_df_prep.apply(create_tooltip, axis=1)
-            
             y_col_timeline = 'Importe DRC' if 'Importe DRC' in timeline_df_prep.columns and timeline_df_prep['Importe DRC'].notna().any() else 'Siglas de la Institución'
             size_col_timeline = 'Importe DRC' if 'Importe DRC' in timeline_df_prep.columns and timeline_df_prep['Importe DRC'].notna().any() else None
             color_col_timeline = 'Oportunidad' if 'Oportunidad' in timeline_df_prep.columns else None
             hover_name_col = 'Título del contrato' if 'Título del contrato' in timeline_df_prep.columns else None
-
-
             fig_timeline = px.scatter(
                 timeline_df_prep,
                 x='Fecha de fin del contrato',
@@ -709,7 +613,7 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
                     y_col_timeline: 'Importe (MXN)' if y_col_timeline == 'Importe DRC' else 'Institución',
                     'Oportunidad': 'Categoría Oportunidad'
                 },
-                color_discrete_map={ # Asegúrate que estos labels coincidan con los de 'Oportunidad'
+                color_discrete_map={
                     'Vencido': 'grey',
                     'Urgente (< 3 meses)': 'red',
                     'Corto plazo (3-6 meses)': 'orange',
@@ -724,40 +628,25 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
         else:
             fig_timeline.update_layout(title="No hay contratos próximos a vencer o vencidos recientemente")
 
-
-    # Tabla de oportunidades
     opportunity_table_content = html.Div("No hay datos disponibles para mostrar oportunidades en tabla.", style={'textAlign': 'center', 'padding': '20px'})
     if 'Tiempo hasta vencimiento (días)' in filtered_df.columns:
-        # Filtrar solo contratos que vencen en los próximos 12 meses (o ya vencieron y están en 'Oportunidad')
         opp_df = filtered_df[
-            (filtered_df['Tiempo hasta vencimiento (días)'] <= 365) # Incluye vencidos y hasta 1 año
+            (filtered_df['Tiempo hasta vencimiento (días)'] <= 365)
         ].copy()
-
         if not opp_df.empty:
             opp_df = opp_df.sort_values('Tiempo hasta vencimiento (días)')
             display_cols = ['Siglas de la Institución', 'Título del contrato', 'Proveedor o contratista',
-                            'Fecha de fin del contrato', 'Tiempo hasta vencimiento (días)', 'Oportunidad'] # Fecha de inicio no está aquí por defecto
+                            'Fecha de fin del contrato', 'Tiempo hasta vencimiento (días)', 'Oportunidad']
             if 'Importe DRC' in opp_df.columns:
                 display_cols.append('Importe DRC')
-
             table_cols_present = [col for col in display_cols if col in opp_df.columns]
             opp_table_df = opp_df[table_cols_present].head(20).copy()
-
-            # Formato robusto para 'Fecha de fin del contrato'
             if 'Fecha de fin del contrato' in opp_table_df.columns:
                 date_series = pd.to_datetime(opp_table_df['Fecha de fin del contrato'], errors='coerce')
                 opp_table_df.loc[:, 'Fecha de fin del contrato'] = date_series.apply(lambda x: x.strftime('%d/%m/%Y') if pd.notnull(x) else 'N/A')
-            
-            # Si 'Fecha de inicio del contrato' se añadiera a display_cols, necesitaría un formato similar:
-            # if 'Fecha de inicio del contrato' in opp_table_df.columns:
-            #     date_series_inicio = pd.to_datetime(opp_table_df['Fecha de inicio del contrato'], errors='coerce')
-            #     opp_table_df.loc[:, 'Fecha de inicio del contrato'] = date_series_inicio.apply(lambda x: x.strftime('%d/%m/%Y') if pd.notnull(x) else 'N/A')
-
             if 'Importe DRC' in opp_table_df.columns:
                 formatted_importes = opp_table_df['Importe DRC'].apply(lambda x: f"${x:,.2f} MXN" if pd.notna(x) else "N/A")
                 opp_table_df.loc[:, 'Importe DRC'] = formatted_importes.to_numpy()
-
-
             opportunity_table_content = dash_table.DataTable(
                 id='opportunity-table',
                 columns=[{"name": col.replace('_', ' ').title(), "id": col} for col in opp_table_df.columns],
@@ -775,24 +664,21 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
             )
         else:
             opportunity_table_content = html.Div("No hay contratos próximos a vencer o vencidos recientemente en los filtros seleccionados.", style={'textAlign': 'center', 'padding': '20px'})
-
     return fig_opp, fig_value, fig_timeline, opportunity_table_content
 
-#Callbacks para ;a tabla de contratos de la pestana 2: Oportunidades de Negocio
+#Callbacks para la tabla de contratos de la pestana 2: Oportunidades de Negocio MODIFICADO
 @app.callback(
     Output('opportunity-category-contracts-table-container', 'children'),
     [Input('opportunities-expiry-graph', 'clickData'),
      Input('tic-dropdown', 'value'), 
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-def display_opportunity_category_contracts_table(click_data, tic_filter, selected_siglas, selected_gobierno, importe_range):
+def display_opportunity_category_contracts_table(click_data, tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
     ctx = dash.callback_context
     if not click_data or not click_data['points']:
         return html.P("Haz clic en una barra del gráfico 'Oportunidades por Proximidad de Vencimiento' para ver los contratos asociados.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
-
     try:
         selected_category = click_data['points'][0]['x']
     except (KeyError, IndexError, TypeError) as e:
@@ -800,18 +686,15 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
         return html.P("No se pudo obtener la categoría seleccionada del gráfico.",
                       style={'textAlign': 'center', 'marginTop': '20px', 'color': 'red'})
 
-    # Aplicar filtros globales
-    filtered_df_global = filter_dataframe(df.copy(), tic_filter, selected_siglas, selected_gobierno, importe_range)
+    filtered_df_global = filter_dataframe(df.copy(), tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
     
     if filtered_df_global.empty:
         return html.P(f"No hay datos para los filtros generales seleccionados al buscar contratos para la categoría '{selected_category}'.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
-
     if 'Oportunidad' not in filtered_df_global.columns:
         return html.P("La columna 'Oportunidad' no se encuentra en los datos filtrados.",
                       style={'color': 'red', 'textAlign': 'center', 'marginTop': '20px'})
 
-    # Filtrar por la categoría de oportunidad seleccionada
     category_contracts_df = filtered_df_global[
         filtered_df_global['Oportunidad'] == selected_category
     ].copy()
@@ -820,7 +703,6 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
         return html.P(f"No se encontraron contratos para la categoría '{selected_category}' con los filtros actuales.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
 
-    # Validar y preparar columnas
     col_titulo = 'Título del contrato'
     col_institucion = 'Siglas de la Institución'
     col_proveedor = 'Proveedor o contratista'
@@ -837,15 +719,12 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
     if col_titulo in category_contracts_df.columns:
         current_cols.append(col_titulo)
         cols_for_table_display.append({"name": "Título del Contrato", "id": col_titulo})
-    
     if col_institucion in category_contracts_df.columns:
         current_cols.append(col_institucion)
         cols_for_table_display.append({"name": "Institución", "id": col_institucion})
-
     if col_proveedor in category_contracts_df.columns:
         current_cols.append(col_proveedor)
         cols_for_table_display.append({"name": "Proveedor", "id": col_proveedor})
-
     if col_importe in category_contracts_df.columns:
         current_cols.append(col_importe)
         category_contracts_df[col_importe] = pd.to_numeric(category_contracts_df[col_importe], errors='coerce')
@@ -855,17 +734,14 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
                 scheme=dash_table.Format.Scheme.fixed, precision=2,
                 group=True, symbol=dash_table.Format.Symbol.yes, symbol_prefix='$')
         })
-
     if col_inicio in category_contracts_df.columns:
         current_cols.append(col_inicio)
         category_contracts_df[col_inicio] = pd.to_datetime(category_contracts_df[col_inicio], errors='coerce').dt.strftime('%d/%m/%Y').fillna('N/A')
         cols_for_table_display.append({"name": "Fecha Inicio", "id": col_inicio})
-
     if col_fin in category_contracts_df.columns:
         current_cols.append(col_fin)
         category_contracts_df[col_fin] = pd.to_datetime(category_contracts_df[col_fin], errors='coerce').dt.strftime('%d/%m/%Y').fillna('N/A')
         cols_for_table_display.append({"name": "Fecha Fin", "id": col_fin})
-
     if col_oportunidad in category_contracts_df.columns:
         current_cols.append(col_oportunidad)
         cols_for_table_display.append({"name": "Categoría Oportunidad", "id": col_oportunidad})
@@ -885,13 +761,10 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
         return html.P(f"No hay columnas con datos para mostrar para la categoría '{selected_category}'.",
                       style={'textAlign': 'center', 'marginTop': '20px', 'color': 'red'})
 
-    # Asegurar orden por vencimiento si existe la columna
     if 'Tiempo hasta vencimiento (días)' in category_contracts_df.columns:
         category_contracts_df = category_contracts_df.sort_values(by='Tiempo hasta vencimiento (días)', ascending=True)
-
     data_for_table = category_contracts_df[current_cols]
 
-    # Construir estilo condicional seguro
     style_cell_conditional = [
         {'if': {'column_id': col_titulo}, 'minWidth': '200px', 'fontWeight': 'bold'},
         {'if': {'column_id': col_importe}, 'textAlign': 'right', 'minWidth': '130px'}
@@ -899,7 +772,6 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
     if col_anuncio in category_contracts_df.columns:
         style_cell_conditional.append({'if': {'column_id': md_col_anuncio}, 'textAlign': 'center', 'minWidth': '100px'})
 
-    # Renderizar tabla
     table = dash_table.DataTable(
         id='opportunity-category-specific-contracts-table',
         columns=cols_for_table_display,
@@ -920,7 +792,6 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
         filter_action='native',
         sort_action='native',
     )
-
     return html.Div([
         html.H4(f"Contratos en la categoría de oportunidad: '{selected_category}'",
                 style={'marginTop': '20px', 'marginBottom': '10px', 'textAlign': 'center', 'color': '#2c3e50'}),
@@ -928,8 +799,7 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
         table
     ])
 
-
-# Callbacks para actualizar las visualizaciones de la pestaña 3: Análisis Competitivo
+# Callbacks para actualizar las visualizaciones de la pestaña 3: Análisis Competitivo MODIFICADO
 @app.callback(
     [Output('provider-share-graph', 'figure'),
      Output('provider-specialization-graph', 'figure'),
@@ -937,18 +807,16 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
      Output('competitor-table-container', 'children')],
     [Input('tic-dropdown', 'value'),
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
-    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, importe_range)
+def update_tab3(tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
+    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
 
     if filtered_df.empty:
         empty_fig = go.Figure().update_layout(title="No hay datos para los filtros seleccionados", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
         empty_table = html.Div("No hay datos para mostrar en la tabla.", style={'textAlign': 'center', 'padding': '20px'})
         return empty_fig, empty_fig, empty_fig, empty_table
 
-    # Market Share de Proveedores (Top 10)
     fig_share = go.Figure().update_layout(title="No hay datos de proveedores")
     if 'Proveedor o contratista' in filtered_df.columns:
         provider_col = 'Proveedor o contratista'
@@ -960,7 +828,7 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
                     provider_share, values='Importe DRC', names=provider_col,
                     title="Market Share de Proveedores TIC (por Importe)", hole=0.4
                 )
-        elif 'Código del contrato' in filtered_df.columns and not filtered_df[provider_col].dropna().empty : # Por número de contratos
+        elif 'Código del contrato' in filtered_df.columns and not filtered_df[provider_col].dropna().empty :
             provider_share = filtered_df.groupby(provider_col)['Código del contrato'].count().reset_index(name='count')
             provider_share = provider_share.sort_values('count', ascending=False).head(10)
             if not provider_share.empty:
@@ -969,23 +837,14 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
                     title="Market Share de Proveedores TIC (por Número de Contratos)", hole=0.4
                 )
 
-
-    # Especialización de Proveedores
     fig_spec = go.Figure().update_layout(title="No hay datos para especialización de proveedores")
     if 'Proveedor o contratista' in filtered_df.columns and 'terminos_positivos' in filtered_df.columns:
-        # Asegurarse que terminos_positivos es una lista
         df_spec_prep = filtered_df[filtered_df['terminos_positivos'].apply(lambda x: isinstance(x, list) and len(x) > 0)].copy()
         if not df_spec_prep.empty:
-            df_spec_prep['primer_termino'] = df_spec_prep['terminos_positivos'].apply(lambda x: x[0] if x else None) # Tomar el primer término como especialización
-            
-            # Contar frecuencia de (Proveedor, primer_termino)
-            # Usaremos el valor del contrato para determinar los "top proveedores" y luego su especialización
+            df_spec_prep['primer_termino'] = df_spec_prep['terminos_positivos'].apply(lambda x: x[0] if x else None)
             if 'Importe DRC' in df_spec_prep.columns:
                 top_providers_by_value = df_spec_prep.groupby('Proveedor o contratista')['Importe DRC'].sum().nlargest(15).index
                 spec_df_focus = df_spec_prep[df_spec_prep['Proveedor o contratista'].isin(top_providers_by_value)]
-                
-                # Para cada uno de estos proveedores, encontrar su término más frecuente o el de su contrato más grande
-                # Simplificamos: tomamos el primer término del primer contrato (o el más común si hay muchos)
                 provider_specialization_list = []
                 for provider in top_providers_by_value:
                     provider_contracts = spec_df_focus[spec_df_focus['Proveedor o contratista'] == provider]
@@ -997,7 +856,7 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
                             provider_specialization_list.append({
                                 'Proveedor': provider,
                                 'Término Especialización': most_common[0],
-                                'Frecuencia': most_common[1] # Frecuencia de ese término para ese proveedor
+                                'Frecuencia': most_common[1]
                             })
                 if provider_specialization_list:
                     spec_df_viz = pd.DataFrame(provider_specialization_list)
@@ -1009,8 +868,6 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
                     )
                     fig_spec.update_layout(xaxis={'categoryorder':'total descending'})
 
-
-    # Duración Promedio de Contratos por Proveedor
     fig_duration = go.Figure().update_layout(title="No hay datos para duración de contratos")
     if 'Proveedor o contratista' in filtered_df.columns and 'Duración del contrato (días)' in filtered_df.columns:
         duration_df_prep = filtered_df.dropna(subset=['Proveedor o contratista', 'Duración del contrato (días)'])
@@ -1028,7 +885,6 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 )
                 fig_duration.update_layout(xaxis={'categoryorder':'total descending'})
 
-    # Tabla de análisis de competidores
     competitor_table_content = html.Div("No hay datos para análisis de competidores.", style={'textAlign': 'center', 'padding': '20px'})
     if 'Proveedor o contratista' in filtered_df.columns and 'Código del contrato' in filtered_df.columns:
         agg_dict = {
@@ -1040,13 +896,9 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
             agg_dict['valor_promedio'] = ('Importe DRC', 'mean')
         if 'Duración del contrato (días)' in filtered_df.columns:
             agg_dict['duracion_promedio'] = ('Duración del contrato (días)', 'mean')
-
         competitor_analysis = filtered_df.groupby('Proveedor o contratista').agg(**agg_dict).reset_index()
-
         sort_col = 'valor_total' if 'valor_total' in competitor_analysis.columns else 'total_contratos'
         competitor_analysis = competitor_analysis.sort_values(sort_col, ascending=False).head(15).copy()
-
-
         if 'valor_total' in competitor_analysis.columns:
             formatted_valor_total = competitor_analysis['valor_total'].apply(lambda x: f"${x:,.2f} MXN" if pd.notna(x) else "N/A")
             competitor_analysis['valor_total'] = formatted_valor_total.to_numpy()
@@ -1056,8 +908,6 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
         if 'duracion_promedio' in competitor_analysis.columns:
             formatted_duracion_promedio = competitor_analysis['duracion_promedio'].apply(lambda x: f"{x:.0f} días" if pd.notna(x) else "N/A")
             competitor_analysis['duracion_promedio'] = formatted_duracion_promedio.to_numpy()
-
-        
         if not competitor_analysis.empty:
             competitor_table_content = dash_table.DataTable(
                 id='competitor-table',
@@ -1069,69 +919,55 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#f9f9f9'}],
                 page_size=15
             )
-            
     return fig_share, fig_spec, fig_duration, competitor_table_content
 
-
-####### Callbacks para mostrar los contratos al hacer clic en el gráfico de proveedores #######
+# Callbacks para mostrar los contratos al hacer clic en el gráfico de proveedores MODIFICADO
 @app.callback(
     Output('provider-contracts-table-container', 'children'),
     [Input('provider-share-graph', 'clickData'),
-     Input('tic-dropdown', 'value'), # Pasar filtros globales
+     Input('tic-dropdown', 'value'),
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-def display_provider_contracts_table(click_data, tic_filter, selected_siglas, selected_gobierno, importe_range):
+def display_provider_contracts_table(click_data, tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
     ctx = dash.callback_context
     if not click_data or not click_data['points']:
         return html.P("Haga clic en un proveedor en el gráfico de Market Share para ver sus contratos.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
-
     try:
         provider_name = click_data['points'][0]['label']
     except (KeyError, IndexError, TypeError):
         return html.P("No se pudo obtener el proveedor seleccionado del gráfico.",
                       style={'textAlign': 'center', 'marginTop': '20px', 'color': 'red'})
 
-    # Aplicar los filtros globales al DataFrame original 'df'
-    # Es importante usar el 'df' global que ya tiene las columnas preprocesadas
-    filtered_df_for_provider = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, importe_range)
+    filtered_df_for_provider = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
 
     if filtered_df_for_provider.empty:
         return html.P(f"No hay datos para los filtros generales seleccionados al buscar contratos de '{provider_name}'.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
-
     if 'Proveedor o contratista' not in filtered_df_for_provider.columns:
         return html.P("La columna 'Proveedor o contratista' no se encuentra en los datos filtrados.",
                       style={'color': 'red', 'textAlign': 'center', 'marginTop': '20px'})
-
     provider_contracts_df = filtered_df_for_provider[
         filtered_df_for_provider['Proveedor o contratista'] == provider_name
-    ].copy() # Usar .copy() para evitar SettingWithCopyWarning
-
+    ].copy()
     if provider_contracts_df.empty:
         return html.P(f"No se encontraron contratos para '{provider_name}' con los filtros actuales.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
 
-    # Definir columnas y formatear
     cols_to_display_data = pd.DataFrame()
     cols_for_table = []
-    
-    col_titulo_script = 'Título del contrato' # Nombre esperado por el script
+    col_titulo_script = 'Título del contrato'
     col_importe_script = 'Importe DRC'
     col_fecha_inicio_script = 'Fecha de inicio del contrato'
     col_fecha_fin_script = 'Fecha de fin del contrato'
-    col_anuncio_script = 'Dirección del anuncio' # Nombre esperado por el script
-
-    # Preparar columnas para la tabla
+    col_anuncio_script = 'Dirección del anuncio'
     current_cols = []
     if col_titulo_script in provider_contracts_df.columns:
         current_cols.append(col_titulo_script)
         cols_for_table.append({"name": "Título del Contrato", "id": col_titulo_script})
     if col_importe_script in provider_contracts_df.columns:
         current_cols.append(col_importe_script)
-        # Formatear Importe DRC como numérico en la tabla
         provider_contracts_df.loc[:, col_importe_script] = pd.to_numeric(provider_contracts_df[col_importe_script], errors='coerce')
         cols_for_table.append({
             "name": "Importe DRC", "id": col_importe_script, "type": "numeric",
@@ -1139,13 +975,10 @@ def display_provider_contracts_table(click_data, tic_filter, selected_siglas, se
         })
     if col_fecha_inicio_script in provider_contracts_df.columns:
         current_cols.append(col_fecha_inicio_script)
-        # Formato robusto de fecha
         provider_contracts_df[col_fecha_inicio_script] = provider_contracts_df[col_fecha_inicio_script].astype(str).str[:10]
         cols_for_table.append({"name": "Fecha Inicio", "id": col_fecha_inicio_script})
-
     if col_fecha_fin_script in provider_contracts_df.columns:
         current_cols.append(col_fecha_fin_script)
-        # Formato robusto de fecha
         provider_contracts_df[col_fecha_fin_script] = provider_contracts_df[col_fecha_fin_script].astype(str).str[:10]
         cols_for_table.append({"name": "Fecha Fin", "id": col_fecha_fin_script})
 
@@ -1160,11 +993,9 @@ def display_provider_contracts_table(click_data, tic_filter, selected_siglas, se
         warning_message = html.P("Advertencia: La columna 'Dirección del anuncio' no fue encontrada.", style={'color': 'orange', 'textAlign': 'center'})
 
     cols_to_display_data = provider_contracts_df[current_cols]
-
     if not cols_for_table:
         return html.P(f"No hay columnas válidas para mostrar para el proveedor '{provider_name}'.",
                       style={'textAlign': 'center', 'marginTop': '20px', 'color': 'red'})
-
     table = dash_table.DataTable(
         id='provider-specific-contracts-table',
         columns=cols_for_table,
@@ -1178,7 +1009,7 @@ def display_provider_contracts_table(click_data, tic_filter, selected_siglas, se
             {'if': {'column_id': 'Enlace_Anuncio_MD'}, 'textAlign': 'center', 'minWidth': '100px'}
         ],
         style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#f9f9f9'}],
-        page_size=5, # Menos filas para esta tabla específica
+        page_size=5,
         filter_action='native',
         sort_action='native',
     )
@@ -1188,24 +1019,22 @@ def display_provider_contracts_table(click_data, tic_filter, selected_siglas, se
         table
     ])
 
-# Callbacks para actualizar las visualizaciones de la pestaña 4: Distribución Geográfica
+# Callbacks para actualizar las visualizaciones de la pestaña 4: Distribución Geográfica MODIFICADO
 @app.callback(
     [Output('geo-distribution-graph', 'figure'),
      Output('government-level-graph', 'figure'),
      Output('procedure-type-graph', 'figure')],
     [Input('tic-dropdown', 'value'),
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-def update_tab4(tic_filter, selected_siglas, selected_gobierno, importe_range):
-    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, importe_range)
+def update_tab4(tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
+    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
 
     if filtered_df.empty:
         empty_fig = go.Figure().update_layout(title="No hay datos para los filtros seleccionados", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
         return empty_fig, empty_fig, empty_fig
 
-    # Mapa de distribución geográfica (simplificado por la falta de coordenadas)
     fig_geo = go.Figure().update_layout(title="No hay datos para distribución por orden de gobierno")
     if 'Orden de gobierno' in filtered_df.columns and 'Código del contrato' in filtered_df.columns:
         geo_df = filtered_df.groupby('Orden de gobierno')['Código del contrato'].count().reset_index(name='count')
@@ -1221,7 +1050,6 @@ def update_tab4(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 showarrow=False, font=dict(size=10, color="gray")
             )
 
-    # Gasto TIC por Orden de Gobierno
     fig_gov = go.Figure().update_layout(title="No hay datos para gasto por orden de gobierno")
     if 'Orden de gobierno' in filtered_df.columns and 'Importe DRC' in filtered_df.columns:
         gov_spending_prep = filtered_df.dropna(subset=['Importe DRC'])
@@ -1234,7 +1062,6 @@ def update_tab4(tic_filter, selected_siglas, selected_gobierno, importe_range):
                     title="Distribución del Gasto TIC por Orden de Gobierno", hole=0.4
                 )
 
-    # Tipo de Procedimiento por Región/Gobierno
     fig_proc = go.Figure().update_layout(title="No hay datos para tipo de procedimiento")
     if 'Tipo Procedimiento' in filtered_df.columns and 'Orden de gobierno' in filtered_df.columns and 'Código del contrato' in filtered_df.columns:
         proc_df_prep = filtered_df.dropna(subset=['Tipo Procedimiento', 'Orden de gobierno'])
@@ -1248,8 +1075,7 @@ def update_tab4(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 )
     return fig_geo, fig_gov, fig_proc
 
-
-# Callbacks para actualizar las visualizaciones de la pestaña 5: Análisis de Términos TIC
+# Callbacks para actualizar las visualizaciones de la pestaña 5: Análisis de Términos TIC MODIFICADO
 @app.callback(
     [Output('top-terms-graph', 'figure'),
      Output('terms-trend-graph', 'figure'),
@@ -1257,11 +1083,10 @@ def update_tab4(tic_filter, selected_siglas, selected_gobierno, importe_range):
      Output('term-value-graph', 'figure')],
     [Input('tic-dropdown', 'value'),
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-def update_tab5(tic_filter, selected_siglas, selected_gobierno, importe_range):
-    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, importe_range)
+def update_tab5(tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
+    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
 
     empty_fig_layout = dict(
         title="No hay datos para los filtros seleccionados",
@@ -1277,32 +1102,16 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, importe_range):
     if filtered_df.empty or 'terminos_positivos' not in filtered_df.columns:
         return fig_terms, fig_trend, fig_cooccur, fig_value_term
 
-    # Función segura para obtener listas de términos (ya definida globalmente, pero podría redefinirse o asegurarse que está en scope si es necesario)
-    def safe_eval_list(val): # Redefinida aquí para asegurar que el callback la tenga, aunque en el script original estaba global
-        if isinstance(val, list): return val
-        if isinstance(val, str):
-            try:
-                # import ast # ya importado arriba
-                parsed = ast.literal_eval(val) # Esto no se usará si 'terminos_positivos' ya es lista
-                if isinstance(parsed, list): return parsed
-            except (ValueError, SyntaxError): pass
-        return []
-
-    # Como 'terminos_positivos' ya es una lista de strings por el preprocesamiento, no necesitamos safe_eval_list
-    # Necesitamos aplanar la lista de listas de términos
     all_terms_series = filtered_df['terminos_positivos'].dropna()
     all_terms_flat = [term for sublist in all_terms_series for term in sublist if term.strip() != ""]
 
-
-    if not all_terms_flat: # Si no hay términos después de filtrar y aplanar
+    if not all_terms_flat:
         fig_terms.update_layout(title="No se encontraron términos TIC")
         fig_trend.update_layout(title="No se encontraron términos TIC para tendencias")
         fig_cooccur.update_layout(title="No se encontraron términos TIC para co-ocurrencia")
         fig_value_term.update_layout(title="No se encontraron términos TIC para análisis de valor")
         return fig_terms, fig_trend, fig_cooccur, fig_value_term
 
-
-    # Top Términos TIC
     if all_terms_flat:
         term_counts = Counter(all_terms_flat).most_common(15)
         if term_counts:
@@ -1317,21 +1126,15 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, importe_range):
         else:
             fig_terms.update_layout(title="No hay términos suficientes para el gráfico Top")
 
-
-    # Tendencias de Términos por Año
     if all_terms_flat and 'Fecha de inicio del contrato' in filtered_df.columns:
         trend_base = filtered_df[['Fecha de inicio del contrato', 'terminos_positivos']].dropna(subset=['Fecha de inicio del contrato']).copy()
         if not trend_base.empty:
             trend_base['Year'] = trend_base['Fecha de inicio del contrato'].dt.year
-            # 'terminos_positivos' ya es una lista de strings
             trend_exploded = trend_base.explode('terminos_positivos').dropna(subset=['terminos_positivos'])
             trend_exploded = trend_exploded[trend_exploded['terminos_positivos'].str.strip() != ""]
-
-
             if not trend_exploded.empty:
                 top_5_terms = [term for term, _ in Counter(all_terms_flat).most_common(5)]
                 trend_filtered_for_plot = trend_exploded[trend_exploded['terminos_positivos'].isin(top_5_terms)]
-                
                 if not trend_filtered_for_plot.empty:
                     term_yearly_counts = trend_filtered_for_plot.groupby(['Year', 'terminos_positivos']).size().reset_index(name='Frecuencia')
                     term_yearly_counts = term_yearly_counts.sort_values('Year')
@@ -1348,30 +1151,18 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, importe_range):
         else:
             fig_trend.update_layout(title="No hay fechas válidas para tendencias de términos")
 
-
-    # Co-ocurrencia de Términos
     if all_terms_flat:
-        # Usar las listas de terminos_positivos directamente
         cooccur_base_lists = filtered_df['terminos_positivos'].dropna().tolist()
-        cooccur_base_lists = [lst for lst in cooccur_base_lists if lst] # Filtrar listas vacías
-
+        cooccur_base_lists = [lst for lst in cooccur_base_lists if lst]
         if cooccur_base_lists:
             top_10_terms_cooccur = [term for term, _ in Counter(all_terms_flat).most_common(10)]
             cooccurrence_matrix = pd.DataFrame(0, index=top_10_terms_cooccur, columns=top_10_terms_cooccur)
-
             from itertools import combinations
             for terms_list_in_contract in cooccur_base_lists:
-                # Filtrar términos en la lista del contrato para que solo estén los top_10
                 relevant_terms_in_contract = [term for term in terms_list_in_contract if term in top_10_terms_cooccur]
-                # Pares únicos de términos relevantes dentro de este contrato
-                for term1, term2 in combinations(set(relevant_terms_in_contract), 2): # Usar set para evitar duplicados si un término está varias veces en la lista
+                for term1, term2 in combinations(set(relevant_terms_in_contract), 2):
                     cooccurrence_matrix.loc[term1, term2] += 1
                     cooccurrence_matrix.loc[term2, term1] += 1
-            
-            # Opcional: Llenar diagonal con frecuencia total del término (del top 10)
-            # for term in top_10_terms_cooccur:
-            #    cooccurrence_matrix.loc[term, term] = Counter(all_terms_flat)[term]
-
             if not cooccurrence_matrix.empty:
                 fig_cooccur = px.imshow(
                     cooccurrence_matrix,
@@ -1379,34 +1170,28 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, importe_range):
                     labels=dict(x="Término 1", y="Término 2", color="Co-ocurrencias"),
                     color_continuous_scale='Viridis'
                 )
-                fig_cooccur.update_layout(height=600) # Ajustar tamaño para mejor visualización
+                fig_cooccur.update_layout(height=600)
             else:
                 fig_cooccur.update_layout(title="No hay datos para matriz de co-ocurrencia")
         else:
             fig_cooccur.update_layout(title="No hay listas de términos válidas para co-ocurrencia")
 
-
-    # Valor Promedio de Contratos por Término TIC
     if all_terms_flat and 'Importe DRC' in filtered_df.columns:
         value_term_base = filtered_df[['terminos_positivos', 'Importe DRC']].dropna(subset=['Importe DRC']).copy()
         if not value_term_base.empty:
             value_term_exploded = value_term_base.explode('terminos_positivos').dropna(subset=['terminos_positivos'])
             value_term_exploded = value_term_exploded[value_term_exploded['terminos_positivos'].str.strip() != ""]
-
             if not value_term_exploded.empty:
                 term_value_agg = value_term_exploded.groupby('terminos_positivos')['Importe DRC'].agg(['mean', 'count']).reset_index()
                 term_value_agg.rename(columns={'mean': 'Valor Promedio', 'count': 'Num Contratos', 'terminos_positivos': 'Término'}, inplace=True)
-                
-                # Filtrar términos con al menos N contratos (ej. 2) y tomar Top 15 por valor promedio
                 term_value_filtered_plot = term_value_agg[term_value_agg['Num Contratos'] >= 1].sort_values('Valor Promedio', ascending=False).head(15)
-
                 if not term_value_filtered_plot.empty:
                     fig_value_term = px.bar(
                         term_value_filtered_plot, x='Término', y='Valor Promedio',
                         color='Num Contratos',
                         title="Valor Promedio de Contratos por Término TIC (Top 15)",
                         labels={'Valor Promedio': 'Valor Promedio (MXN)', 'Término': '', 'Num Contratos': 'Núm. Contratos'},
-                        color_continuous_scale='Blues', #Cambiado de Viridis para diferenciar
+                        color_continuous_scale='Blues',
                         hover_data={'Valor Promedio': ':,.2f'}
                     )
                     fig_value_term.update_layout(xaxis={'categoryorder':'total descending'})
@@ -1416,22 +1201,17 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, importe_range):
                 fig_value_term.update_layout(title="No hay términos válidos para explotar en análisis de valor")
         else:
             fig_value_term.update_layout(title="No hay importes válidos para análisis de valor por término")
-
     return fig_terms, fig_trend, fig_cooccur, fig_value_term
 
-
-#Callbacks para actualizar la ventana de Redes de Contratacion
+#Callbacks para actualizar la ventana de Redes de Contratacion MODIFICADO
 @app.callback(
     Output('network-graph', 'figure'),
     [Input('tic-dropdown', 'value'),
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-
-#Ventana de Redes de Contratacion
-def update_tab_network(tic_filter, selected_siglas, selected_gobierno, importe_range):
-    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, importe_range)
+def update_tab_network(tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
+    filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
 
     empty_network_fig_layout = {
         "title": "No hay datos suficientes para crear la red",
@@ -1440,84 +1220,57 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, importe_r
         "yaxis": {"showgrid": False, "zeroline": False, "showticklabels": False},
         "plot_bgcolor": "rgba(0,0,0,0)", "paper_bgcolor": "rgba(0,0,0,0)"
     }
-
     if filtered_df.empty or \
        'Proveedor o contratista' not in filtered_df.columns or \
        'Siglas de la Institución' not in filtered_df.columns:
         return go.Figure().update_layout(**empty_network_fig_layout)
 
-    # 1. Crear pares y agregar
     link_col = 'Importe DRC' if 'Importe DRC' in filtered_df.columns and filtered_df['Importe DRC'].notna().any() else 'Código del contrato'
     agg_func = 'sum' if link_col == 'Importe DRC' else 'count'
-    
-    # Asegurarse de no tener nulos en las columnas clave para la red
     network_data_prep = filtered_df.dropna(subset=['Proveedor o contratista', 'Siglas de la Institución', link_col])
-
     if network_data_prep.empty:
         empty_network_fig_layout["title"] = "No hay datos válidos (proveedor, institución, valor/conteo) para generar la red"
         return go.Figure().update_layout(**empty_network_fig_layout)
-
     edges_df = network_data_prep.groupby(['Proveedor o contratista', 'Siglas de la Institución']).agg(
         weight=(link_col, agg_func)
     ).reset_index()
-
-    top_n = 50 # Limitar a las N relaciones más fuertes
+    top_n = 50
     edges_df = edges_df.sort_values('weight', ascending=False).head(top_n)
-
     if edges_df.empty:
         empty_network_fig_layout["title"] = "No se encontraron relaciones significativas para mostrar en la red"
         return go.Figure().update_layout(**empty_network_fig_layout)
 
-    # 2. Crear lista de nodos únicos
     proveedores_nodes = pd.unique(edges_df['Proveedor o contratista'])
     instituciones_nodes = pd.unique(edges_df['Siglas de la Institución'])
     all_graph_nodes = np.concatenate([proveedores_nodes, instituciones_nodes])
-    # Eliminar duplicados si una entidad es tanto proveedor como institución (poco probable aquí)
     all_graph_nodes = pd.unique(all_graph_nodes) 
-    
     node_map = {name: i for i, name in enumerate(all_graph_nodes)}
-    
-    # Determinar tipo de nodo para colorear (más robusto)
     node_types_map = {p: 'Proveedor' for p in proveedores_nodes}
     for i_node in instituciones_nodes:
-        if i_node not in node_types_map: # Si no es ya un proveedor, es institución
+        if i_node not in node_types_map:
             node_types_map[i_node] = 'Institución'
-        # else: podría ser ambos, priorizar uno o manejar como "Mixto"
-
-    # 3. Crear posiciones para los nodos (Layout Circular Simple)
     num_graph_nodes = len(all_graph_nodes)
-    if num_graph_nodes == 0: # No debería pasar si edges_df no está vacío
+    if num_graph_nodes == 0:
         return go.Figure().update_layout(**empty_network_fig_layout)
-
-    radius = 5 if num_graph_nodes > 1 else 0 # Evitar división por cero si hay un solo nodo
+    radius = 5 if num_graph_nodes > 1 else 0
     angles = np.linspace(0, 2 * np.pi, num_graph_nodes, endpoint=False) if num_graph_nodes > 1 else [0]
     pos_x = radius * np.cos(angles)
     pos_y = radius * np.sin(angles)
     node_positions = {name: (pos_x[i], pos_y[i]) for i, name in enumerate(all_graph_nodes)}
-
     fig_network = go.Figure()
-
-    # 4. Crear Trazas para los Enlaces (Edges)
     min_w, max_w = edges_df['weight'].min(), edges_df['weight'].max()
-    
     for _, row in edges_df.iterrows():
         prov_name = row['Proveedor o contratista']
         inst_name = row['Siglas de la Institución']
-        
-        # Asegurarse que los nodos del enlace existen en el mapa de posiciones
         if prov_name not in node_positions or inst_name not in node_positions:
-            continue # Saltar este enlace si uno de los nodos no está en la lista principal (raro si edges_df es la fuente)
-
+            continue
         x0, y0 = node_positions[prov_name]
         x1, y1 = node_positions[inst_name]
-        
-        # Normalizar grosor de línea
         line_width = 1
         if max_w > min_w:
             line_width = 1 + 4 * (row['weight'] - min_w) / (max_w - min_w)
-        elif max_w == min_w and max_w > 0 : # Todos los pesos son iguales y no cero
+        elif max_w == min_w and max_w > 0 :
             line_width = 2 
-        
         weight_label = f"${row['weight']:,.2f}" if link_col == 'Importe DRC' else f"{int(row['weight'])} contratos"
         fig_network.add_trace(go.Scatter(
             x=[x0, x1], y=[y0, y1], mode='lines',
@@ -1525,31 +1278,22 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, importe_r
             hoverinfo='text',
             text=f"Relación: {prov_name} &harr; {inst_name}<br>Valor/Conteo: {weight_label}"
         ))
-
-    # 5. Crear Traza para los Nodos
     node_x_coords = [node_positions[node][0] for node in all_graph_nodes]
     node_y_coords = [node_positions[node][1] for node in all_graph_nodes]
-    
     node_hover_texts = []
     node_display_texts = []
     node_colors_list = []
-    
-    # Calcular grado del nodo
     node_degrees = Counter()
     for _, row in edges_df.iterrows():
         node_degrees[row['Proveedor o contratista']] += 1
         node_degrees[row['Siglas de la Institución']] += 1
-
     node_sizes_list = []
-
     for node_name in all_graph_nodes:
         node_type = node_types_map.get(node_name, "Desconocido")
         node_hover_texts.append(f"{node_type}: {node_name}<br>Conexiones: {node_degrees[node_name]}")
-        node_display_texts.append(node_name[:15] + '...' if len(node_name) > 15 else node_name) # Acortar texto en nodo
-        node_colors_list.append('firebrick' if node_type == 'Proveedor' else 'steelblue') # Colores distintos
-        node_sizes_list.append(8 + node_degrees[node_name] * 2.5) # Tamaño basado en grado
-
-
+        node_display_texts.append(node_name[:15] + '...' if len(node_name) > 15 else node_name)
+        node_colors_list.append('firebrick' if node_type == 'Proveedor' else 'steelblue')
+        node_sizes_list.append(8 + node_degrees[node_name] * 2.5)
     fig_network.add_trace(go.Scatter(
         x=node_x_coords, y=node_y_coords, mode='markers+text',
         text=node_display_texts, textposition="bottom center", textfont=dict(size=9),
@@ -1559,9 +1303,7 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, importe_r
             line=dict(width=0.8, color='DarkSlateGrey')
         )
     ))
-
-    # 6. Configurar Layout de la Figura
-    layout_padding = 1 if num_graph_nodes > 1 else 1 # Espacio alrededor del círculo
+    layout_padding = 1 if num_graph_nodes > 1 else 1
     fig_network.update_layout(
         title=None, showlegend=False, hovermode='closest',
         margin=dict(b=10, l=5, r=5, t=10),
@@ -1571,24 +1313,19 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, importe_r
     )
     return fig_network
 
-####### Callback para mostrar contratos al hacer clic en el gráfico de Top Términos TIC #######
+# Callback para mostrar contratos al hacer clic en el gráfico de Top Términos TIC MODIFICADO
 @app.callback(
     Output('term-contracts-table-container', 'children'),
     [Input('top-terms-graph', 'clickData'),
      Input('tic-dropdown', 'value'),
      Input('siglas-dropdown', 'value'),
-     Input('gobierno-dropdown', 'value'),
-     Input('importe-slider', 'value')]
+     Input('gobierno-dropdown', 'value')] # Eliminado Input('importe-slider', 'value')
 )
-
-
-# Esta función se encarga de mostrar los contratos asociados al término TIC seleccionado en el gráfico
-def display_term_contracts_table(click_data, tic_filter, selected_siglas, selected_gobierno, importe_range):
+def display_term_contracts_table(click_data, tic_filter, selected_siglas, selected_gobierno): # Eliminado importe_range
     ctx = dash.callback_context
     if not click_data or not click_data['points']:
         return html.P("Haz clic en una barra del gráfico 'Top Términos TIC' para ver los contratos asociados.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
-
     try:
         selected_term = click_data['points'][0]['x']
     except (KeyError, IndexError, TypeError) as e:
@@ -1596,46 +1333,37 @@ def display_term_contracts_table(click_data, tic_filter, selected_siglas, select
         return html.P("No se pudo obtener el término seleccionado del gráfico.",
                       style={'textAlign': 'center', 'marginTop': '20px', 'color': 'red'})
 
-    filtered_df_global = filter_dataframe(df.copy(), tic_filter, selected_siglas, selected_gobierno, importe_range)
+    filtered_df_global = filter_dataframe(df.copy(), tic_filter, selected_siglas, selected_gobierno) # Modificada la llamada
 
     if filtered_df_global.empty:
         return html.P(f"No hay datos para los filtros generales seleccionados al buscar contratos para el término '{selected_term}'.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
-
     if 'terminos_positivos' not in filtered_df_global.columns:
         return html.P("La columna 'terminos_positivos' no se encuentra en los datos filtrados.",
                       style={'color': 'red', 'textAlign': 'center', 'marginTop': '20px'})
-
     term_contracts_df = filtered_df_global[
         filtered_df_global['terminos_positivos'].apply(lambda terms_list: isinstance(terms_list, list) and selected_term in terms_list)
     ].copy()
-
     if term_contracts_df.empty:
         return html.P(f"No se encontraron contratos para el término '{selected_term}' con los filtros actuales.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
 
     cols_for_table_display = []
     data_for_table = pd.DataFrame()
-
     col_titulo_script = 'Título del contrato'
-    col_institucion_script = 'Siglas de la Institución' # <--- Asegúrate que esta columna exista o quieras mostrarla
+    col_institucion_script = 'Siglas de la Institución'
     col_importe_script = 'Importe DRC'
     col_fecha_inicio_script = 'Fecha de inicio del contrato'
     col_fecha_fin_script = 'Fecha de fin del contrato'
     col_anuncio_script = 'Dirección del anuncio'
-
     current_cols_for_selection = []
 
     if col_titulo_script in term_contracts_df.columns:
         current_cols_for_selection.append(col_titulo_script)
         cols_for_table_display.append({"name": "Título del Contrato", "id": col_titulo_script})
-
-    # Añadir columna Institución si existe y se desea (como en la tabla de ejemplo de proveedor)
     if col_institucion_script in term_contracts_df.columns:
         current_cols_for_selection.append(col_institucion_script)
         cols_for_table_display.append({"name": "Institución", "id": col_institucion_script})
-
-
     if col_importe_script in term_contracts_df.columns:
         current_cols_for_selection.append(col_importe_script)
         term_contracts_df.loc[:, col_importe_script] = pd.to_numeric(term_contracts_df[col_importe_script], errors='coerce')
@@ -1643,22 +1371,17 @@ def display_term_contracts_table(click_data, tic_filter, selected_siglas, select
             "name": "Importe DRC", "id": col_importe_script, "type": "numeric",
             "format": dash_table.Format.Format(scheme=dash_table.Format.Scheme.fixed, precision=2, group=True, symbol=dash_table.Format.Symbol.yes, symbol_prefix='$')
         })
-
     if col_fecha_inicio_script in term_contracts_df.columns:
         current_cols_for_selection.append(col_fecha_inicio_script)
-        # Formato robusto de fecha
         term_contracts_df[col_fecha_inicio_script] = term_contracts_df[col_fecha_inicio_script].astype(str).str[:10]
         cols_for_table_display.append({"name": "Fecha Inicio", "id": col_fecha_inicio_script,"type": "text"})
-
     if col_fecha_fin_script in term_contracts_df.columns:
         current_cols_for_selection.append(col_fecha_fin_script)
-        # Formato robusto de fecha
         term_contracts_df[col_fecha_fin_script] = term_contracts_df[col_fecha_fin_script].astype(str).str[:10]
         cols_for_table_display.append({"name": "Fecha Fin", "id": col_fecha_fin_script, "type": "text"})
 
     warning_message_anuncio = None
     if col_anuncio_script in term_contracts_df.columns:
-        # Usar un nombre de columna único para el markdown si es diferente de la tabla de proveedor
         term_contracts_df['Enlace_Anuncio_Term_MD'] = term_contracts_df[col_anuncio_script].apply(
             lambda x: f"[Ver Anuncio]({x})" if pd.notna(x) and str(x).strip().lower().startswith('http') else "N/A"
         )
@@ -1667,51 +1390,41 @@ def display_term_contracts_table(click_data, tic_filter, selected_siglas, select
     else:
         warning_message_anuncio = html.P("Advertencia: La columna 'Dirección del anuncio' no fue encontrada para esta tabla.", style={'color': 'orange', 'textAlign': 'center', 'fontSize': '0.9em'})
 
-
     if not current_cols_for_selection:
-         return html.P(f"No hay columnas con datos para mostrar para el término '{selected_term}'.",
+        return html.P(f"No hay columnas con datos para mostrar para el término '{selected_term}'.",
                       style={'textAlign': 'center', 'marginTop': '20px', 'color': 'red'})
-
     data_for_table = term_contracts_df[current_cols_for_selection]
-
 
     table = dash_table.DataTable(
         id='term-specific-contracts-table',
         columns=cols_for_table_display,
         data=data_for_table.to_dict('records'),
-        # Estilos copiados/adaptados de 'provider-specific-contracts-table'
         style_table={'overflowX': 'auto', 'marginTop': '10px', 'border': '1px solid #ddd', 'borderRadius': '5px', 'width':'100%'},
-        style_header={'backgroundColor': '#34495e', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center', 'padding': '10px'}, # Coincide con tabla proveedor
+        style_header={'backgroundColor': '#34495e', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center', 'padding': '10px'},
         style_cell={
             'textAlign': 'left', 'padding': '8px',
-            'minWidth': '120px', 'maxWidth': '400px', # Coincide con tabla proveedor
+            'minWidth': '120px', 'maxWidth': '400px',
             'whiteSpace': 'normal', 'height': 'auto',
             'border': '1px solid #eee',
-            'fontFamily': 'Arial, sans-serif', 'fontSize': '13px', # Coincide con tabla proveedor
-            'verticalAlign': 'middle' # Añadido para consistencia
+            'fontFamily': 'Arial, sans-serif', 'fontSize': '13px',
+            'verticalAlign': 'middle'
             },
         style_cell_conditional=[
-            # Coincide con tabla proveedor
             {'if': {'column_id': col_titulo_script}, 'minWidth': '250px', 'fontWeight': 'bold'},
             {'if': {'column_id': col_importe_script}, 'textAlign': 'right', 'minWidth': '150px'},
-            # Asegúrate que 'Enlace_Anuncio_Term_MD' es el id correcto si la columna se llama así
             {'if': {'column_id': 'Enlace_Anuncio_Term_MD'}, 'textAlign': 'center', 'minWidth': '100px'}
         ],
-        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#f9f9f9'}], # Coincide con tabla proveedor
+        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#f9f9f9'}],
         page_size=5,
         filter_action='native',
         sort_action='native',
     )
-
     return html.Div([
-        # Título con estilo similar al de la tabla de proveedor
         html.H4(f"Contratos que incluyen el término: '{selected_term}'",
-                style={'marginTop': '20px', 'marginBottom': '5px', 'textAlign': 'center', 'color': '#2c3e50'}), # Color oscuro como otros H4
+                style={'marginTop': '20px', 'marginBottom': '5px', 'textAlign': 'center', 'color': '#2c3e50'}),
         warning_message_anuncio if warning_message_anuncio else "",
         table
     ])
-
-
 
 # Agregar CSS para estilizar mejor la aplicación
 app.index_string = '''
@@ -1729,35 +1442,31 @@ app.index_string = '''
                 background-color: #f8f9fa;
             }
             .metric-box {
-                /* width: 23%; */ /* Ajustado por flex */
-                flex: 1; /* Permite que las cajas crezcan y se encojan */
-                margin: 0 10px; /* Espacio entre cajas */
-                border-radius: 8px; /* Bordes más redondeados */
-                box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Sombra más sutil */
+                flex: 1; 
+                margin: 0 10px; 
+                border-radius: 8px; 
+                box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
                 background: white;
-                padding: 20px; /* Más padding */
-                text-align: center; /* Centrar contenido de métricas */
+                padding: 20px; 
+                text-align: center; 
             }
             .metric-box:first-child { margin-left: 0; }
             .metric-box:last-child { margin-right: 0; }
-
             .metric-box h4 {
                 margin-top: 0;
                 margin-bottom: 8px;
-                font-size: 1em; /* Tamaño de fuente para el título de la métrica */
+                font-size: 1em; 
                 color: #555;
             }
             .metric-box p {
-                font-size: 1.5em; /* Tamaño de fuente para el valor de la métrica */
+                font-size: 1.5em; 
                 font-weight: bold;
                 color: #2c3e50;
                 margin-bottom: 0;
             }
-
             h1, h3 {
                 color: #2c3e50;
             }
-            /* Estilos para Dash DataTable (pueden necesitar ajustes) */
             .dash-spreadsheet-container table {
                 border-collapse: collapse;
                 width: 100%;
@@ -1770,11 +1479,10 @@ app.index_string = '''
             }
             .dash-spreadsheet-container th {
                 background-color: #f2f2f2;
-                position: sticky; /* Encabezados pegajosos si la tabla tiene scroll */
+                position: sticky; 
                 top: 0;
                 z-index: 1;
             }
-            /* Estilos para Tabs */
             .Tabs {
                 border-bottom: 1px solid #ddd;
             }
@@ -1787,13 +1495,12 @@ app.index_string = '''
             }
             .Tab--selected {
                 border-color: #ddd;
-                border-bottom: 1px solid white; /* O el color de fondo del contenido */
-                background-color: white; /* O el color de fondo del contenido */
+                border-bottom: 1px solid white; 
+                background-color: white; 
                 border-radius: 5px 5px 0 0;
                 color: #2c3e50;
                 font-weight: bold;
             }
-
         </style>
     </head>
     <body>
