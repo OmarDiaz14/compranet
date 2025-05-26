@@ -736,21 +736,26 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, importe_range):
         if not opp_df.empty:
             opp_df = opp_df.sort_values('Tiempo hasta vencimiento (días)')
             display_cols = ['Siglas de la Institución', 'Título del contrato', 'Proveedor o contratista',
-                            'Fecha de fin del contrato', 'Tiempo hasta vencimiento (días)', 'Oportunidad']
+                            'Fecha de fin del contrato', 'Tiempo hasta vencimiento (días)', 'Oportunidad'] # Fecha de inicio no está aquí por defecto
             if 'Importe DRC' in opp_df.columns:
                 display_cols.append('Importe DRC')
 
             table_cols_present = [col for col in display_cols if col in opp_df.columns]
-            opp_table_df = opp_df[table_cols_present].head(20).copy() # Usar .copy() para evitar SettingWithCopyWarning
+            opp_table_df = opp_df[table_cols_present].head(20).copy()
 
+            # Formato robusto para 'Fecha de fin del contrato'
             if 'Fecha de fin del contrato' in opp_table_df.columns:
-                opp_table_df['Fecha de fin del contrato'] = opp_table_df['Fecha de fin del contrato'].dt.strftime('%d/%m/%Y')
-            if 'Importe DRC' in opp_table_df.columns:
-                # Primero, genera la serie de strings formateados
-                formatted_importes = opp_table_df['Importe DRC'].apply(lambda x: f"${x:,.2f} MXN" if pd.notna(x) else "N/A")
-                # Luego, asigna los valores como un array de NumPy para ser más explícito
-                opp_table_df.loc[:, 'Importe DRC'] = formatted_importes.to_numpy()
+                date_series = pd.to_datetime(opp_table_df['Fecha de fin del contrato'], errors='coerce')
+                opp_table_df.loc[:, 'Fecha de fin del contrato'] = date_series.apply(lambda x: x.strftime('%d/%m/%Y') if pd.notnull(x) else 'N/A')
+            
+            # Si 'Fecha de inicio del contrato' se añadiera a display_cols, necesitaría un formato similar:
+            # if 'Fecha de inicio del contrato' in opp_table_df.columns:
+            #     date_series_inicio = pd.to_datetime(opp_table_df['Fecha de inicio del contrato'], errors='coerce')
+            #     opp_table_df.loc[:, 'Fecha de inicio del contrato'] = date_series_inicio.apply(lambda x: x.strftime('%d/%m/%Y') if pd.notnull(x) else 'N/A')
 
+            if 'Importe DRC' in opp_table_df.columns:
+                formatted_importes = opp_table_df['Importe DRC'].apply(lambda x: f"${x:,.2f} MXN" if pd.notna(x) else "N/A")
+                opp_table_df.loc[:, 'Importe DRC'] = formatted_importes.to_numpy()
 
 
             opportunity_table_content = dash_table.DataTable(
@@ -797,7 +802,7 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
 
     # Aplicar filtros globales
     filtered_df_global = filter_dataframe(df.copy(), tic_filter, selected_siglas, selected_gobierno, importe_range)
-
+    
     if filtered_df_global.empty:
         return html.P(f"No hay datos para los filtros generales seleccionados al buscar contratos para la categoría '{selected_category}'.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
@@ -815,84 +820,91 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
         return html.P(f"No se encontraron contratos para la categoría '{selected_category}' con los filtros actuales.",
                       style={'textAlign': 'center', 'marginTop': '20px'})
 
-    # Definir columnas y formatear
+    # Validar y preparar columnas
+    col_titulo = 'Título del contrato'
+    col_institucion = 'Siglas de la Institución'
+    col_proveedor = 'Proveedor o contratista'
+    col_importe = 'Importe DRC'
+    col_inicio = 'Fecha de inicio del contrato'
+    col_fin = 'Fecha de fin del contrato'
+    col_anuncio = 'Dirección del anuncio'
+    col_oportunidad = 'Oportunidad'
+    md_col_anuncio = 'Enlace_Anuncio_Oportunidad_MD'
+
+    current_cols = []
     cols_for_table_display = []
+
+    if col_titulo in category_contracts_df.columns:
+        current_cols.append(col_titulo)
+        cols_for_table_display.append({"name": "Título del Contrato", "id": col_titulo})
     
-    col_titulo_script = 'Título del contrato'
-    col_institucion_script = 'Siglas de la Institución'
-    col_proveedor_script = 'Proveedor o contratista'
-    col_importe_script = 'Importe DRC'
-    col_fecha_inicio_script = 'Fecha de inicio del contrato'
-    col_fecha_fin_script = 'Fecha de fin del contrato'
-    col_anuncio_script = 'Dirección del anuncio'
-    col_oportunidad_script = 'Oportunidad' # Puede mostrarse para confirmar
+    if col_institucion in category_contracts_df.columns:
+        current_cols.append(col_institucion)
+        cols_for_table_display.append({"name": "Institución", "id": col_institucion})
 
-    current_cols_for_selection = []
+    if col_proveedor in category_contracts_df.columns:
+        current_cols.append(col_proveedor)
+        cols_for_table_display.append({"name": "Proveedor", "id": col_proveedor})
 
-    if col_titulo_script in category_contracts_df.columns:
-        current_cols_for_selection.append(col_titulo_script)
-        cols_for_table_display.append({"name": "Título del Contrato", "id": col_titulo_script})
-    
-    if col_institucion_script in category_contracts_df.columns:
-        current_cols_for_selection.append(col_institucion_script)
-        cols_for_table_display.append({"name": "Institución", "id": col_institucion_script})
-
-    if col_proveedor_script in category_contracts_df.columns:
-        current_cols_for_selection.append(col_proveedor_script)
-        cols_for_table_display.append({"name": "Proveedor", "id": col_proveedor_script})
-
-    if col_importe_script in category_contracts_df.columns:
-        current_cols_for_selection.append(col_importe_script)
-        category_contracts_df.loc[:, col_importe_script] = pd.to_numeric(category_contracts_df[col_importe_script], errors='coerce')
+    if col_importe in category_contracts_df.columns:
+        current_cols.append(col_importe)
+        category_contracts_df[col_importe] = pd.to_numeric(category_contracts_df[col_importe], errors='coerce')
         cols_for_table_display.append({
-            "name": "Importe DRC", "id": col_importe_script, "type": "numeric",
-            "format": dash_table.Format.Format(scheme=dash_table.Format.Scheme.fixed, precision=2, group=True, symbol=dash_table.Format.Symbol.yes, symbol_prefix='$')
+            "name": "Importe DRC", "id": col_importe, "type": "numeric",
+            "format": dash_table.Format.Format(
+                scheme=dash_table.Format.Scheme.fixed, precision=2,
+                group=True, symbol=dash_table.Format.Symbol.yes, symbol_prefix='$')
         })
-    
-    if col_fecha_inicio_script in category_contracts_df.columns:
-        current_cols_for_selection.append(col_fecha_inicio_script)
-        category_contracts_df.loc[:, col_fecha_inicio_script] = pd.to_datetime(category_contracts_df[col_fecha_inicio_script], errors='coerce').dt.strftime('%d/%m/%Y')
-        cols_for_table_display.append({"name": "Fecha Inicio", "id": col_fecha_inicio_script})
 
-    if col_fecha_fin_script in category_contracts_df.columns:
-        current_cols_for_selection.append(col_fecha_fin_script)
-        category_contracts_df.loc[:, col_fecha_fin_script] = pd.to_datetime(category_contracts_df[col_fecha_fin_script], errors='coerce').dt.strftime('%d/%m/%Y')
-        cols_for_table_display.append({"name": "Fecha Fin", "id": col_fecha_fin_script})
+    if col_inicio in category_contracts_df.columns:
+        current_cols.append(col_inicio)
+        category_contracts_df[col_inicio] = pd.to_datetime(category_contracts_df[col_inicio], errors='coerce').dt.strftime('%d/%m/%Y').fillna('N/A')
+        cols_for_table_display.append({"name": "Fecha Inicio", "id": col_inicio})
 
-    if col_oportunidad_script in category_contracts_df.columns: # Opcional, ya que todos serán de la misma categoría
-        current_cols_for_selection.append(col_oportunidad_script)
-        cols_for_table_display.append({"name": "Categoría Oportunidad", "id": col_oportunidad_script})
+    if col_fin in category_contracts_df.columns:
+        current_cols.append(col_fin)
+        category_contracts_df[col_fin] = pd.to_datetime(category_contracts_df[col_fin], errors='coerce').dt.strftime('%d/%m/%Y').fillna('N/A')
+        cols_for_table_display.append({"name": "Fecha Fin", "id": col_fin})
 
+    if col_oportunidad in category_contracts_df.columns:
+        current_cols.append(col_oportunidad)
+        cols_for_table_display.append({"name": "Categoría Oportunidad", "id": col_oportunidad})
 
     warning_message_anuncio = None
-    md_col_name_oportunidad = 'Enlace_Anuncio_Oportunidad_MD' # Nombre único para esta tabla
-    if col_anuncio_script in category_contracts_df.columns:
-        category_contracts_df[md_col_name_oportunidad] = category_contracts_df[col_anuncio_script].apply(
+    if col_anuncio in category_contracts_df.columns:
+        category_contracts_df[md_col_anuncio] = category_contracts_df[col_anuncio].apply(
             lambda x: f"[Ver Anuncio]({x})" if pd.notna(x) and str(x).strip().lower().startswith('http') else "N/A"
         )
-        current_cols_for_selection.append(md_col_name_oportunidad)
-        cols_for_table_display.append({"name": "Anuncio", "id": md_col_name_oportunidad, 'presentation': 'markdown'})
+        current_cols.append(md_col_anuncio)
+        cols_for_table_display.append({"name": "Anuncio", "id": md_col_anuncio, 'presentation': 'markdown'})
     else:
-        warning_message_anuncio = html.P(f"Advertencia: La columna '{col_anuncio_script}' no fue encontrada.", style={'color': 'orange', 'textAlign': 'center', 'fontSize': '0.9em'})
+        warning_message_anuncio = html.P(f"Advertencia: La columna '{col_anuncio}' no fue encontrada.", 
+                                         style={'color': 'orange', 'textAlign': 'center', 'fontSize': '0.9em'})
 
-    if not current_cols_for_selection:
-         return html.P(f"No hay columnas con datos para mostrar para la categoría '{selected_category}'.",
-                       style={'textAlign': 'center', 'marginTop': '20px', 'color': 'red'})
-    
-    # Ordenar por 'Tiempo hasta vencimiento (días)' para mostrar los más urgentes primero dentro de la categoría
-    # Esto es útil si la categoría no es 'Vencido', donde el tiempo es negativo o cero.
-    data_for_table = category_contracts_df.copy()
-    if 'Tiempo hasta vencimiento (días)' in data_for_table.columns:
-        data_for_table = data_for_table.sort_values(by='Tiempo hasta vencimiento (días)', ascending=True)
-    
-    data_for_table = data_for_table[current_cols_for_selection]
+    if not current_cols:
+        return html.P(f"No hay columnas con datos para mostrar para la categoría '{selected_category}'.",
+                      style={'textAlign': 'center', 'marginTop': '20px', 'color': 'red'})
 
+    # Asegurar orden por vencimiento si existe la columna
+    if 'Tiempo hasta vencimiento (días)' in category_contracts_df.columns:
+        category_contracts_df = category_contracts_df.sort_values(by='Tiempo hasta vencimiento (días)', ascending=True)
 
+    data_for_table = category_contracts_df[current_cols]
+
+    # Construir estilo condicional seguro
+    style_cell_conditional = [
+        {'if': {'column_id': col_titulo}, 'minWidth': '200px', 'fontWeight': 'bold'},
+        {'if': {'column_id': col_importe}, 'textAlign': 'right', 'minWidth': '130px'}
+    ]
+    if col_anuncio in category_contracts_df.columns:
+        style_cell_conditional.append({'if': {'column_id': md_col_anuncio}, 'textAlign': 'center', 'minWidth': '100px'})
+
+    # Renderizar tabla
     table = dash_table.DataTable(
-        id='opportunity-category-specific-contracts-table', # ID único para esta tabla
+        id='opportunity-category-specific-contracts-table',
         columns=cols_for_table_display,
         data=data_for_table.to_dict('records'),
-        style_table={'overflowX': 'auto', 'marginTop': '10px', 'border': '1px solid #ddd', 'borderRadius': '5px', 'width':'100%'},
+        style_table={'overflowX': 'auto', 'marginTop': '10px', 'border': '1px solid #ddd', 'borderRadius': '5px', 'width': '100%'},
         style_header={'backgroundColor': '#34495e', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center', 'padding': '10px'},
         style_cell={
             'textAlign': 'left', 'padding': '8px',
@@ -902,15 +914,8 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
             'fontFamily': 'Arial, sans-serif', 'fontSize': '13px',
             'verticalAlign': 'middle'
         },
-        style_cell_conditional=[
-            {'if': {'column_id': col_titulo_script}, 'minWidth': '200px', 'fontWeight': 'bold'},
-            {'if': {'column_id': col_importe_script}, 'textAlign': 'right', 'minWidth': '130px'},
-            {'if': {'column_id': md_col_name_oportunidad if col_anuncio_script in category_contracts_df.columns else ''}, 
-             'textAlign': 'center', 'minWidth': '100px'}
-        ],
-        style_data_conditional=[
-            {'if': {'row_index': 'odd'}, 'backgroundColor': '#f9f9f9'}
-        ],
+        style_cell_conditional=style_cell_conditional,
+        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#f9f9f9'}],
         page_size=10,
         filter_action='native',
         sort_action='native',
@@ -1134,11 +1139,14 @@ def display_provider_contracts_table(click_data, tic_filter, selected_siglas, se
         })
     if col_fecha_inicio_script in provider_contracts_df.columns:
         current_cols.append(col_fecha_inicio_script)
-        provider_contracts_df.loc[:, col_fecha_inicio_script] = pd.to_datetime(provider_contracts_df[col_fecha_inicio_script], errors='coerce').dt.strftime('%d/%m/%Y')
+        # Formato robusto de fecha
+        provider_contracts_df[col_fecha_inicio_script] = provider_contracts_df[col_fecha_inicio_script].astype(str).str[:10]
         cols_for_table.append({"name": "Fecha Inicio", "id": col_fecha_inicio_script})
+
     if col_fecha_fin_script in provider_contracts_df.columns:
         current_cols.append(col_fecha_fin_script)
-        provider_contracts_df.loc[:, col_fecha_fin_script] = pd.to_datetime(provider_contracts_df[col_fecha_fin_script], errors='coerce').dt.strftime('%d/%m/%Y')
+        # Formato robusto de fecha
+        provider_contracts_df[col_fecha_fin_script] = provider_contracts_df[col_fecha_fin_script].astype(str).str[:10]
         cols_for_table.append({"name": "Fecha Fin", "id": col_fecha_fin_script})
 
     warning_message = None
@@ -1638,14 +1646,15 @@ def display_term_contracts_table(click_data, tic_filter, selected_siglas, select
 
     if col_fecha_inicio_script in term_contracts_df.columns:
         current_cols_for_selection.append(col_fecha_inicio_script)
-        # Asegurar que la conversión a datetime se haga antes del strftime y maneje errores
-        term_contracts_df.loc[:, col_fecha_inicio_script] = pd.to_datetime(term_contracts_df[col_fecha_inicio_script], errors='coerce').dt.strftime('%Y-%m-%d') # Cambiado a YYYY-MM-DD para que se vea como en la tabla de proveedores, o usa '%d/%m/%Y'
-        cols_for_table_display.append({"name": "Fecha Inicio", "id": col_fecha_inicio_script})
+        # Formato robusto de fecha
+        term_contracts_df[col_fecha_inicio_script] = term_contracts_df[col_fecha_inicio_script].astype(str).str[:10]
+        cols_for_table_display.append({"name": "Fecha Inicio", "id": col_fecha_inicio_script,"type": "text"})
 
     if col_fecha_fin_script in term_contracts_df.columns:
         current_cols_for_selection.append(col_fecha_fin_script)
-        term_contracts_df.loc[:, col_fecha_fin_script] = pd.to_datetime(term_contracts_df[col_fecha_fin_script], errors='coerce').dt.strftime('%Y-%m-%d') # Cambiado a YYYY-MM-DD
-        cols_for_table_display.append({"name": "Fecha Fin", "id": col_fecha_fin_script})
+        # Formato robusto de fecha
+        term_contracts_df[col_fecha_fin_script] = term_contracts_df[col_fecha_fin_script].astype(str).str[:10]
+        cols_for_table_display.append({"name": "Fecha Fin", "id": col_fecha_fin_script, "type": "text"})
 
     warning_message_anuncio = None
     if col_anuncio_script in term_contracts_df.columns:
