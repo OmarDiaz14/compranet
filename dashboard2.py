@@ -31,7 +31,7 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NA
 engine = create_engine(DATABASE_URL)
 
 # --- Carga de datos y preprocesamiento ---
-df = pd.read_csv("contratos_tic_consolidados_llama3_colab (22).csv", encoding="utf-8")
+df = pd.read_csv("contratos_tic_consolidados_llama3_colab (23).csv", encoding="utf-8")
 
 column_mapping = {
     'CÃ³digo del contrato': 'Código del contrato',
