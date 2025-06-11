@@ -1,5 +1,5 @@
 import dash
-from dash import html, dcc, dash_table
+from dash import html, dcc, dash_table, no_update, State
 from dash.dependencies import Input, Output, State
 import pandas as pd
 import plotly.express as px
@@ -9,6 +9,26 @@ import numpy as np
 from collections import Counter
 import calendar
 import ast
+
+
+
+#---------- Importaciones para BD y Seguridad --------
+import os 
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from werkzeug.security import check_password_hash
+
+# Carga el env 
+load_dotenv()
+
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST =os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+engine = create_engine(DATABASE_URL)
 
 # --- Carga de datos y preprocesamiento ---
 df = pd.read_csv("contratos_tic_consolidados_llama3_colab (22).csv", encoding="utf-8")
@@ -67,18 +87,44 @@ else:
 
 orden_gobierno_list = df['Orden de gobierno'].dropna().unique() if 'Orden de gobierno' in df.columns else []
 
-# NUEVO: Extraer lista de estados
-# Asumimos que la columna se llama 'Estado'. Cambiar si es necesario.
 if 'Estado' in df.columns:
     estado_list = sorted(df['Estado'].dropna().unique())
 else:
     estado_list = []
     print("Advertencia: La columna 'Estado' no se encontró. El filtro de estado no estará disponible.")
-
-app = dash.Dash(__name__, suppress_callback_exceptions=True)
+# --- Instancia de la App ---
+app = dash.Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
 server = app.server
 
-app.layout = html.Div([
+# --- Definición de Layouts ---
+login_layout = html.Div([
+    html.Div([
+        html.H2("Iniciar Sesión", style={'textAlign': 'center'}),
+        html.Div(id='login-error', style={'color': 'red', 'textAlign': 'center', 'margin-bottom': '10px'}),
+        dcc.Input(id='username-input', type='text', placeholder='Usuario', style={'margin': '10px auto', 'display': 'block', 'width': '250px', 'padding': '8px'}),
+        dcc.Input(id='password-input', type='password', placeholder='Contraseña', style={'margin': '10px auto', 'display': 'block', 'width': '250px', 'padding': '8px'}),
+        html.Button('Ingresar', id='login-button', n_clicks=0, style={'margin': '20px auto', 'display': 'block', 'backgroundColor': '#2c3e50', 'color': 'white', 'padding': '10px 20px', 'border': 'none', 'borderRadius': '5px'})
+    ], style={
+        'width': '350px', 'margin': '100px auto', 'padding': '40px',
+        'border': '1px solid #ddd', 'borderRadius': '10px', 'backgroundColor': 'white',
+        'boxShadow': '0 4px 8px rgba(0,0,0,0.1)'
+    })
+])
+
+main_layout = html.Div([
+    # NUEVO: Botón de Cerrar Sesión
+    html.Div([
+        html.Button('Cerrar Sesión', id='logout-button', n_clicks=0, style={
+            'margin': '10px',
+            'padding': '5px 10px',
+            'color': '#c0392b',
+            'backgroundColor': 'white',
+            'border': '1px solid #c0392b',
+            'borderRadius': '5px',
+            'cursor': 'pointer'
+        })
+    ], style={'textAlign': 'right'}),
+
     html.H1(
         "Dashboard de Oportunidades en Contratos TIC Gubernamentales",
         style={'textAlign': 'center', 'color': '#2c3e50', 'margin-bottom': '20px'}
@@ -86,42 +132,19 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             html.Label("Filtrar por Clasificación TIC"),
-            dcc.Dropdown(
-                id='tic-dropdown',
-                options=[
-                    {'label': 'Todos los contratos', 'value': 'todos'},
-                    {'label': 'Solo contratos TIC', 'value': 'tic'},
-                    {'label': 'Solo contratos no TIC', 'value': 'no_tic'}
-                ],
-                value='tic'
-            ),
+            dcc.Dropdown(id='tic-dropdown', options=[{'label': 'Todos los contratos', 'value': 'todos'}, {'label': 'Solo contratos TIC', 'value': 'tic'}, {'label': 'Solo contratos no TIC', 'value': 'no_tic'}], value='tic'),
         ], style={'width': '23%', 'display': 'inline-block', 'margin-right': '2%'}),
         html.Div([
             html.Label("Seleccionar Institución"),
-            dcc.Dropdown(
-                id='siglas-dropdown',
-                options=[{'label': sigla, 'value': sigla} for sigla in siglas_list],
-                multi=True,
-                value=[]
-            ),
+            dcc.Dropdown(id='siglas-dropdown', options=[{'label': sigla, 'value': sigla} for sigla in siglas_list], multi=True, value=[]),
         ], style={'width': '23%', 'display': 'inline-block', 'margin-right': '2%'}),
         html.Div([
             html.Label("Orden de Gobierno"),
-            dcc.Dropdown(
-                id='gobierno-dropdown',
-                options=[{'label': orden, 'value': orden} for orden in orden_gobierno_list],
-                multi=True,
-                value=[]
-            ),
+            dcc.Dropdown(id='gobierno-dropdown', options=[{'label': orden, 'value': orden} for orden in orden_gobierno_list], multi=True, value=[]),
         ], style={'width': '23%', 'display': 'inline-block', 'margin-right': '2%'}),
         html.Div([
             html.Label("Seleccionar Estado"),
-            dcc.Dropdown(
-                id='estado-dropdown',
-                options=[{'label': estado, 'value': estado} for estado in estado_list],
-                multi=True,
-                value=[]
-            ),
+            dcc.Dropdown(id='estado-dropdown', options=[{'label': estado, 'value': estado} for estado in estado_list], multi=True, value=[]),
         ], style={'width': '23%', 'display': 'inline-block'}),
     ], style={'margin-bottom': '20px', 'backgroundColor': '#f9f9f9', 'padding': '15px', 'borderRadius': '5px'}),
     dcc.Tabs(id='tabs', value='tab-1', children=[
@@ -131,10 +154,65 @@ app.layout = html.Div([
         dcc.Tab(label='Distribución Geográfica', value='tab-4'),
         dcc.Tab(label='Análisis de Términos y Marcas TIC', value='tab-5'),
         dcc.Tab(label='Redes de Contratacion', value='tab-network'),
-    ], style={'margin-bottom': '20px'}),
+    ]),
     html.Div(id='tabs-content')
 ])
 
+
+# Layout "Raíz" que decide qué página mostrar
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    dcc.Store(id='session-store', storage_type='session'),
+    html.Div(id='page-content')
+])
+
+
+# --- Callbacks de Login y Ruteo ---
+@app.callback(
+    Output('page-content', 'children'),
+    Input('url', 'pathname'),
+    Input('session-store', 'data')
+)
+def display_page(pathname, session_data):
+    is_authenticated = session_data and session_data.get('authenticated', False)
+    if not is_authenticated:
+        return login_layout
+    return main_layout
+
+@app.callback(
+    Output('session-store', 'data'),
+    Output('url', 'pathname'),
+    Output('login-error', 'children'),
+    Input('login-button', 'n_clicks'),
+    State('username-input', 'value'),
+    State('password-input', 'value'),
+    prevent_initial_call=True
+)
+def handle_login(n_clicks, username, password):
+    if not username or not password:
+        return no_update, no_update, "Por favor, ingrese usuario y contraseña."
+    try:
+        query = "SELECT password_hash FROM usuarios WHERE username = %(username)s;"
+        user_data = pd.read_sql(query, engine, params={'username': username})
+        if not user_data.empty:
+            stored_password_hash = user_data['password_hash'].iloc[0]
+            if check_password_hash(stored_password_hash, password):
+                return {'authenticated': True}, '/', ""
+        return no_update, no_update, "Usuario o contraseña incorrectos."
+    except Exception as e:
+        print(f"Error de autenticación en la base de datos: {e}")
+        return no_update, no_update, "Error en el servidor. Intente más tarde."
+
+# NUEVO: Callback para Cerrar Sesión
+@app.callback(
+    Output('session-store', 'data', allow_duplicate=True),
+    Output('url', 'pathname', allow_duplicate=True),
+    Input('logout-button', 'n_clicks'),
+    prevent_initial_call=True
+)
+def handle_logout(n_clicks):
+    # Al hacer clic, borra los datos de la sesión y redirige a /login
+    return None, '/login'
 
 @app.callback(
     Output('tabs-content', 'children'),
