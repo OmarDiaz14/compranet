@@ -11,7 +11,7 @@ import calendar
 import ast
 
 # --- Carga de datos y preprocesamiento ---
-df = pd.read_csv("contratos_tic_consolidados_llama3_colab (22).csv", encoding="utf-8")
+df = pd.read_csv("contratos_tic_consolidados_llama3_colab (23).csv", encoding="utf-8")
 
 column_mapping = {
     'CÃ³digo del contrato': 'Código del contrato',
