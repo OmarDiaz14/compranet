@@ -693,7 +693,8 @@ def update_tab2(tic_filter, selected_siglas, selected_gobierno, selected_estado)
                 df_table.loc[:, 'Fecha de fin del contrato'] = pd.to_datetime(
                     df_table['Fecha de fin del contrato'], errors='coerce'
                 ).dt.strftime('%d/%m/%Y').fillna('N/A')
-            
+
+            # Formatear la columna de importe como moneda (esta ya la tienes bien)
             if 'Importe DRC' in df_table.columns:
                 df_table.loc[:, 'Importe DRC'] = df_table['Importe DRC'].apply(
                     lambda x: f"${x:,.2f} MXN" if pd.notna(x) else 'N/A'
