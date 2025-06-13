@@ -31,7 +31,7 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NA
 engine = create_engine(DATABASE_URL)
 
 # --- Carga de datos y preprocesamiento ---
-df = pd.read_csv("contratos_tic_consolidados_llama3_colab (23).csv", encoding="utf-8")
+df = pd.read_csv("contratos_tic_consolidados_llama3_colab (1).csv", encoding="utf-8")
 
 column_mapping = {
     'CÃ³digo del contrato': 'Código del contrato',
@@ -64,7 +64,7 @@ if 'marca_tic' not in df.columns:
 
 df['Fecha de inicio del contrato'] = pd.to_datetime(df['Fecha de inicio del contrato'], dayfirst=True, errors='coerce')
 df['Fecha de fin del contrato'] = pd.to_datetime(df['Fecha de fin del contrato'], dayfirst=True, errors='coerce')
-df['Fecha de firma del contrato'] = pd.to_datetime(df['Fecha de firma del contrato'], errors='coerce')
+df['Fecha de firma del contrato'] = pd.to_datetime(df['Fecha de firma del contrato'], dayfirst=True, errors='coerce')
 
 df['Duración del contrato (días)'] = (df['Fecha de fin del contrato'] - df['Fecha de inicio del contrato']).dt.days
 df['Mes de inicio'] = df['Fecha de inicio del contrato'].dt.month
@@ -387,7 +387,7 @@ def filter_dataframe(df_original, tic_filter, selected_siglas, selected_gobierno
 
     return filtered_df
 
-
+#### Callbacks y funcion de la primera pestana -----Resumen y Tendencias -----
 @app.callback(
     [Output('metric-tic-percentage', 'children'),
      Output('metric-total-contratos', 'children'),
@@ -405,6 +405,15 @@ def filter_dataframe(df_original, tic_filter, selected_siglas, selected_gobierno
 def update_tab1(tic_filter, selected_siglas, selected_gobierno, selected_estado):
     filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, selected_estado)
 
+    # Limpieza y conversión segura del campo 'Importe DRC'
+    if 'Importe DRC' in filtered_df.columns:
+        filtered_df['Importe DRC'] = (
+            filtered_df['Importe DRC']
+            .astype(str)
+            .str.replace(r'[\$,]', '', regex=True)  # elimina $ y comas
+        )
+        filtered_df['Importe DRC'] = pd.to_numeric(filtered_df['Importe DRC'], errors='coerce')
+    
     if filtered_df.empty:
         empty_fig = go.Figure()
         empty_fig.update_layout(
@@ -535,7 +544,7 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, selected_estado)
 
     return metric_tic, metric_total, metric_avg, metric_total_value, fig_trend, fig_growth, fig_season, fig_top
 
-
+##### Callbaks y funcion de la segunda pestana ------ Oportunidades de Negocio-----
 @app.callback(
     [Output('opportunities-expiry-graph', 'figure'),
      Output('value-expiry-graph', 'figure'),
@@ -549,140 +558,166 @@ def update_tab1(tic_filter, selected_siglas, selected_gobierno, selected_estado)
 def update_tab2(tic_filter, selected_siglas, selected_gobierno, selected_estado):
     filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, selected_estado)
 
-    empty_fig_layout = {
-        "title": "No hay datos para los filtros seleccionados",
-        "xaxis": dict(showgrid=False, zeroline=False, showticklabels=False),
-        "yaxis": dict(showgrid=False, zeroline=False, showticklabels=False),
-        "plot_bgcolor": "rgba(0,0,0,0)", "paper_bgcolor": "rgba(0,0,0,0)"
-    }
-    if filtered_df.empty:
-        empty_fig = go.Figure().update_layout(**empty_fig_layout)
-        empty_table = html.Div("No hay datos para mostrar en la tabla.", style={'textAlign': 'center', 'padding': '20px'})
-        return empty_fig, empty_fig, empty_fig, empty_table
+    if 'Importe DRC' in filtered_df.columns:
+        filtered_df.loc[:, 'Importe DRC'] = (
+            filtered_df['Importe DRC']
+            .astype(str)
+            .str.replace(r'[\$,]', '', regex=True)
+        )
+        filtered_df.loc[:, 'Importe DRC'] = pd.to_numeric(
+            filtered_df['Importe DRC'], errors='coerce'
+        )
 
-    fig_opp = go.Figure().update_layout(title="No hay datos de 'Oportunidad' para gráfico")
-    color_map_oportunidad = {
+    color_map = {
         'Vencido': 'grey', 'Urgente (< 3 meses)': 'red',
         'Corto plazo (3-6 meses)': 'orange', 'Medio plazo (6-12 meses)': 'blue',
         'Largo plazo (> 12 meses)': 'green'
     }
-    order_oportunidad = list(color_map_oportunidad.keys())
+    order_oportunidad = list(color_map.keys())
 
-    if 'Oportunidad' in filtered_df.columns and 'Código del contrato' in filtered_df.columns:
-        opp_counts = filtered_df.groupby('Oportunidad', observed=False)['Código del contrato'].count().reset_index(name='count')
-        for cat in order_oportunidad:
-            if cat not in opp_counts['Oportunidad'].values:
-                opp_counts = pd.concat([opp_counts, pd.DataFrame({'Oportunidad': [cat], 'count': [0]})], ignore_index=True)
-        opp_counts['Oportunidad'] = pd.Categorical(opp_counts['Oportunidad'], categories=order_oportunidad, ordered=True)
-        opp_counts = opp_counts.sort_values('Oportunidad')
-        if not opp_counts.empty:
-            fig_opp = px.bar(
-                opp_counts, x='Oportunidad', y='count', title="Distribución de Contratos por Proximidad de Vencimiento",
-                labels={'count': 'Número de Contratos', 'Oportunidad': ''},
-                color='Oportunidad', color_discrete_map=color_map_oportunidad
-            )
-        else:
-            fig_opp.update_layout(title="No hay datos agregados para oportunidades por vencimiento")
+    def empty_fig(title):
+        return go.Figure().update_layout(
+            title=title,
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)"
+        )
 
-    fig_value = go.Figure().update_layout(title="No hay datos de 'Importe DRC' u 'Oportunidad' para gráfico")
-    if 'Oportunidad' in filtered_df.columns and 'Importe DRC' in filtered_df.columns:
-        value_by_expiry_prep = filtered_df.dropna(subset=['Importe DRC'])
-        if not value_by_expiry_prep.empty:
-            value_by_expiry = value_by_expiry_prep.groupby('Oportunidad', observed=False)['Importe DRC'].sum().reset_index()
-            for cat in order_oportunidad:
-                if cat not in value_by_expiry['Oportunidad'].values:
-                    value_by_expiry = pd.concat([value_by_expiry, pd.DataFrame({'Oportunidad': [cat], 'Importe DRC': [0]})], ignore_index=True)
-            value_by_expiry['Oportunidad'] = pd.Categorical(value_by_expiry['Oportunidad'], categories=order_oportunidad, ordered=True)
-            value_by_expiry = value_by_expiry.sort_values('Oportunidad')
-            if not value_by_expiry.empty:
-                fig_value = px.bar(
-                    value_by_expiry, x='Oportunidad', y='Importe DRC', title="Valor Total de Contratos por Proximidad de Vencimiento",
-                    labels={'Importe DRC': 'Importe Total (MXN)', 'Oportunidad': ''},
-                    color='Oportunidad', color_discrete_map=color_map_oportunidad
-                )
-            else:
-                fig_value.update_layout(title="No hay datos agregados para valor por vencimiento")
-        else:
-            fig_value.update_layout(title="No hay importes válidos para valor por vencimiento")
+    if filtered_df.empty:
+        message = html.Div("No hay datos para mostrar.", style={'textAlign': 'center', 'padding': '20px'})
+        return empty_fig("Oportunidad"), empty_fig("Importe DRC"), empty_fig("Línea de Tiempo"), message
 
-    fig_timeline = go.Figure().update_layout(title="No hay datos para línea de tiempo de vencimientos")
+    # --- Gráfico de Oportunidad (sin cambios) ---
+    fig_opp = empty_fig("No hay datos de Oportunidad")
+    if {'Oportunidad', 'Código del contrato'}.issubset(filtered_df.columns):
+        df_opp = filtered_df.groupby('Oportunidad', observed=False)['Código del contrato'].count().reset_index(name='count')
+        df_opp = df_opp.set_index('Oportunidad').reindex(order_oportunidad, fill_value=0).reset_index()
+        fig_opp = px.bar(
+            df_opp, x='Oportunidad', y='count',
+            title="Distribución de Contratos por Proximidad de Vencimiento",
+            labels={'count': 'Número de Contratos', 'Oportunidad': ''},
+            color='Oportunidad', color_discrete_map=color_map
+        )
+
+    # --- Gráfico de Valor por Oportunidad (sin cambios) ---
+    fig_value = empty_fig("No hay datos de Importe DRC")
+    if {'Oportunidad', 'Importe DRC'}.issubset(filtered_df.columns):
+        df_val = filtered_df.dropna(subset=['Importe DRC'])
+        df_val = df_val.groupby('Oportunidad', observed=False)['Importe DRC'].sum().reset_index()
+        df_val = df_val.set_index('Oportunidad').reindex(order_oportunidad, fill_value=0).reset_index()
+        fig_value = px.bar(
+            df_val, x='Oportunidad', y='Importe DRC',
+            title="Valor Total de Contratos por Proximidad de Vencimiento",
+            labels={'Importe DRC': 'Importe Total (MXN)', 'Oportunidad': ''},
+            color='Oportunidad', color_discrete_map=color_map
+        )
+
+    # --- Línea de Tiempo (SECCIÓN CORREGIDA) ---
+    fig_timeline = empty_fig("No hay datos para línea de tiempo")
     if 'Fecha de fin del contrato' in filtered_df.columns:
         now = datetime.now()
-        timeline_df_prep = filtered_df[
-            (filtered_df['Fecha de fin del contrato'] > now - timedelta(days=90)) &
-            (filtered_df['Fecha de fin del contrato'].notna())
+        timeline_df = filtered_df[
+            (filtered_df['Fecha de fin del contrato'].notna()) &
+            (filtered_df['Fecha de fin del contrato'] > now - timedelta(days=90))
         ].copy()
-        if not timeline_df_prep.empty:
-            def create_tooltip(row):
-                titulo = row.get('Título del contrato', 'N/A')
-                siglas = row.get('Siglas de la Institución', 'N/A')
-                proveedor = row.get('Proveedor o contratista', 'N/A')
-                importe_val = row.get('Importe DRC', None)
-                importe_str = f"${importe_val:,.2f} MXN" if pd.notna(importe_val) else "Importe: N/A"
-                return f"Contrato: {titulo}<br>Institución: {siglas}<br>Proveedor: {proveedor}<br>{importe_str}"
 
-            timeline_df_prep['tooltip_info'] = timeline_df_prep.apply(create_tooltip, axis=1)
-            y_col_timeline = 'Importe DRC' if 'Importe DRC' in timeline_df_prep.columns and timeline_df_prep['Importe DRC'].notna().any() else 'Siglas de la Institución'
-            size_col_timeline = 'Importe DRC' if 'Importe DRC' in timeline_df_prep.columns and timeline_df_prep['Importe DRC'].notna().any() else None
-            color_col_timeline = 'Oportunidad' if 'Oportunidad' in timeline_df_prep.columns else None
-            hover_name_col = 'Título del contrato' if 'Título del contrato' in timeline_df_prep.columns else None
+        y_col = 'Importe DRC' if 'Importe DRC' in timeline_df.columns and timeline_df['Importe DRC'].notna().any() else 'Siglas de la Institución'
+        
+        # --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
+        size_col_name = None
+        if y_col == 'Importe DRC':
+            # 1. Creamos una nueva columna específicamente para el tamaño.
+            timeline_df['marker_size'] = pd.to_numeric(timeline_df['Importe DRC'], errors='coerce')
+            
+            # 2. Eliminamos cualquier fila donde el tamaño no sea válido (NaN).
+            timeline_df.dropna(subset=['marker_size'], inplace=True)
+            
+            # 3. Guardamos el NOMBRE de nuestra nueva columna limpia.
+            size_col_name = 'marker_size'
+        # --- FIN DE LA SOLUCIÓN DEFINITIVA ---
+
+        color_col = 'Oportunidad' if 'Oportunidad' in timeline_df.columns else None
+
+        # Verificamos si, después de la limpieza, aún quedan datos para graficar.
+        if timeline_df.empty:
+            fig_timeline = empty_fig("No hay contratos válidos para la línea de tiempo")
+        else:
+            def build_tooltip(row):
+                importe = row.get('Importe DRC')
+                try:
+                    importe_fmt = f"${float(importe):,.2f} MXN"
+                except:
+                    importe_fmt = "Importe: N/A"
+                return f"Contrato: {row.get('Título del contrato', 'N/A')}<br>" \
+                       f"Institución: {row.get('Siglas de la Institución', 'N/A')}<br>" \
+                       f"Proveedor: {row.get('Proveedor o contratista', 'N/A')}<br>{importe_fmt}"
+
+            timeline_df['tooltip_info'] = timeline_df.apply(build_tooltip, axis=1)
 
             fig_timeline = px.scatter(
-                timeline_df_prep, x='Fecha de fin del contrato', y=y_col_timeline,
-                size=size_col_timeline, color=color_col_timeline,
-                hover_name=hover_name_col, hover_data=['tooltip_info'],
+                timeline_df,
+                x='Fecha de fin del contrato',
+                y=y_col,
+                size=size_col_name,  # 4. Usamos el NOMBRE de la columna limpia.
+                color=color_col,
+                hover_name='Título del contrato',
+                hover_data=['tooltip_info'],
                 title="Línea de Tiempo de Vencimientos de Contratos",
                 labels={
                     'Fecha de fin del contrato': 'Fecha de Vencimiento',
-                    y_col_timeline: 'Importe (MXN)' if y_col_timeline == 'Importe DRC' else 'Institución',
-                    'Oportunidad': 'Categoría Oportunidad'
+                    y_col: 'Importe (MXN)' if y_col == 'Importe DRC' else 'Institución',
+                    'Oportunidad': 'Categoría Oportunidad',
+                    'marker_size': 'Importe' # Etiqueta para la leyenda del tamaño
                 },
-                color_discrete_map=color_map_oportunidad
+                color_discrete_map=color_map
             )
             fig_timeline.add_vline(x=now, line_dash="dash", line_color="red")
             fig_timeline.add_annotation(x=now, y=1, yref="paper", text="Hoy", showarrow=False, yshift=10)
-        else:
-            fig_timeline.update_layout(title="No hay contratos próximos a vencer o vencidos recientemente")
 
-    opportunity_table_content = html.Div("No hay datos disponibles para mostrar oportunidades en tabla.", style={'textAlign': 'center', 'padding': '20px'})
+    # --- Tabla de Contratos (sin cambios) ---
+    table_content = html.Div("No hay contratos para mostrar.", style={'textAlign': 'center', 'padding': '20px'})
     if 'Tiempo hasta vencimiento (días)' in filtered_df.columns:
-        opp_df = filtered_df[filtered_df['Tiempo hasta vencimiento (días)'] <= 365].copy()
-        if not opp_df.empty:
-            opp_df = opp_df.sort_values('Tiempo hasta vencimiento (días)')
-            display_cols = ['Siglas de la Institución', 'Título del contrato', 'Proveedor o contratista',
-                            'Fecha de fin del contrato', 'Tiempo hasta vencimiento (días)', 'Oportunidad']
-            if 'Importe DRC' in opp_df.columns:
-                display_cols.append('Importe DRC')
+        df_table = filtered_df[filtered_df['Tiempo hasta vencimiento (días)'] <= 365].copy()
+        if not df_table.empty:
+            df_table = df_table.sort_values('Tiempo hasta vencimiento (días)')
+            cols = ['Siglas de la Institución', 'Título del contrato', 'Proveedor o contratista',
+                    'Fecha de fin del contrato', 'Tiempo hasta vencimiento (días)', 'Oportunidad']
+            if 'Importe DRC' in df_table.columns:
+                cols.append('Importe DRC')
+            cols = [col for col in cols if col in df_table.columns]
 
-            table_cols_present = [col for col in display_cols if col in opp_df.columns]
-            opp_table_df = opp_df[table_cols_present].head(20).copy()
+            df_table = df_table[cols].head(20)
 
-            if 'Fecha de fin del contrato' in opp_table_df.columns:
-                date_series = pd.to_datetime(opp_table_df['Fecha de fin del contrato'], errors='coerce')
-                opp_table_df.loc[:, 'Fecha de fin del contrato'] = date_series.apply(lambda x: x.strftime('%d/%m/%Y') if pd.notnull(x) else 'N/A')
-            if 'Importe DRC' in opp_table_df.columns:
-                formatted_importes = opp_table_df['Importe DRC'].apply(lambda x: f"${x:,.2f} MXN" if pd.notna(x) else "N/A")
-                opp_table_df.loc[:, 'Importe DRC'] = formatted_importes.to_numpy()
+            if 'Fecha de fin del contrato' in df_table.columns:
+                df_table.loc[:, 'Fecha de fin del contrato'] = pd.to_datetime(
+                    df_table['Fecha de fin del contrato'], errors='coerce'
+                ).dt.strftime('%d/%m/%Y').fillna('N/A')
+            
+            if 'Importe DRC' in df_table.columns:
+                df_table.loc[:, 'Importe DRC'] = df_table['Importe DRC'].apply(
+                    lambda x: f"${x:,.2f} MXN" if pd.notna(x) else 'N/A'
+                )
 
-            opportunity_table_content = dash_table.DataTable(
+            table_content = dash_table.DataTable(
                 id='opportunity-table',
-                columns=[{"name": col.replace('_', ' ').title(), "id": col} for col in opp_table_df.columns],
-                data=opp_table_df.to_dict('records'),
+                columns=[{"name": col, "id": col} for col in df_table.columns],
+                data=df_table.to_dict('records'),
                 style_table={'overflowX': 'auto', 'width': '100%'},
-                style_cell={'textAlign': 'left', 'padding': '10px', 'whiteSpace': 'normal', 'height': 'auto', 'minWidth': '100px'},
+                style_cell={'textAlign': 'left', 'padding': '10px', 'whiteSpace': 'normal'},
                 style_header={'backgroundColor': '#2c3e50', 'color': 'white', 'fontWeight': 'bold'},
                 style_data_conditional=[
                     {'if': {'row_index': 'odd'}, 'backgroundColor': '#f9f9f9'},
-                    {'if': {'column_id': 'Oportunidad', 'filter_query': '{Oportunidad} contains "Urgente"'}, 'backgroundColor': '#ffcccc', 'color': 'black'},
-                    {'if': {'column_id': 'Oportunidad', 'filter_query': '{Oportunidad} contains "Corto plazo"'}, 'backgroundColor': '#fff2cc', 'color': 'black'},
-                    {'if': {'column_id': 'Oportunidad', 'filter_query': '{Oportunidad} contains "Vencido"'}, 'backgroundColor': '#dddddd', 'color': 'black'}
+                    {'if': {'column_id': 'Oportunidad', 'filter_query': '{Oportunidad} contains "Urgente"'}, 'backgroundColor': '#ffcccc'},
+                    {'if': {'column_id': 'Oportunidad', 'filter_query': '{Oportunidad} contains "Corto plazo"'}, 'backgroundColor': '#fff2cc'},
+                    {'if': {'column_id': 'Oportunidad', 'filter_query': '{Oportunidad} contains "Vencido"'}, 'backgroundColor': '#dddddd'}
                 ],
                 page_size=10
             )
-        else:
-            opportunity_table_content = html.Div("No hay contratos próximos a vencer o vencidos recientemente en los filtros seleccionados.", style={'textAlign': 'center', 'padding': '20px'})
-    return fig_opp, fig_value, fig_timeline, opportunity_table_content
 
+    return fig_opp, fig_value, fig_timeline, table_content
+
+###### Callbacks y funcion de la segunda pestana pero para el despliegue de los contratos con la grafica
 
 @app.callback(
     Output('opportunity-category-contracts-table-container', 'children'),
@@ -801,6 +836,7 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
         table
     ])
 
+##### Callbacks y funcion de la tercera pestana ----Analisis Competitivo-----
 
 @app.callback(
     [Output('provider-share-graph', 'figure'),
@@ -814,6 +850,18 @@ def display_opportunity_category_contracts_table(click_data, tic_filter, selecte
 )
 def update_tab3(tic_filter, selected_siglas, selected_gobierno, selected_estado):
     filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, selected_estado)
+    
+    # Limpieza inicial (se mantiene por si otras partes la necesitan)
+    if 'Importe DRC' in filtered_df.columns:
+        filtered_df.loc[:, 'Importe DRC'] = (
+            filtered_df['Importe DRC']
+            .astype(str)
+            .str.replace(r'[\$,]', '', regex=True)
+        )
+        filtered_df.loc[:, 'Importe DRC'] = pd.to_numeric(
+            filtered_df['Importe DRC'], errors='coerce'
+        )
+
     empty_fig_layout = {"title": "No hay datos para los filtros seleccionados", "plot_bgcolor": "rgba(0,0,0,0)", "paper_bgcolor": "rgba(0,0,0,0)"}
 
     if filtered_df.empty:
@@ -824,7 +872,7 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, selected_estado)
     fig_share = go.Figure().update_layout(title="No hay datos de proveedores")
     provider_col_name = 'Proveedor o contratista'
     if provider_col_name in filtered_df.columns:
-        if 'Importe DRC' in filtered_df.columns and not filtered_df[provider_col_name].dropna().empty and not filtered_df['Importe DRC'].dropna().empty:
+        if 'Importe DRC' in filtered_df.columns and not filtered_df['Importe DRC'].dropna().empty:
             provider_share = filtered_df.groupby(provider_col_name)['Importe DRC'].sum().reset_index().sort_values('Importe DRC', ascending=False).head(10)
             if not provider_share.empty:
                 fig_share = px.pie(provider_share, values='Importe DRC', names=provider_col_name, title="Market Share de Proveedores TIC (por Importe)", hole=0.4)
@@ -833,13 +881,31 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, selected_estado)
             if not provider_share.empty:
                 fig_share = px.pie(provider_share, values='count', names=provider_col_name, title="Market Share de Proveedores TIC (por Número de Contratos)", hole=0.4)
 
+    # --- Especialización de Proveedores (SECCIÓN CORREGIDA) ---
     fig_spec = go.Figure().update_layout(title="No hay datos para especialización de proveedores")
     if provider_col_name in filtered_df.columns and 'terminos_positivos' in filtered_df.columns:
         df_spec_prep = filtered_df[filtered_df['terminos_positivos'].apply(lambda x: isinstance(x, list) and len(x) > 0)].copy()
-        if not df_spec_prep.empty:
-            # df_spec_prep['primer_termino'] = df_spec_prep['terminos_positivos'].apply(lambda x: x[0] if x else None) # No usado directamente
-            if 'Importe DRC' in df_spec_prep.columns:
-                top_providers_by_value = df_spec_prep.groupby(provider_col_name)['Importe DRC'].sum().nlargest(15).index
+        
+        if not df_spec_prep.empty and 'Importe DRC' in df_spec_prep.columns:
+            
+            # --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
+            # 1. Creamos una Serie temporal garantizada como numérica.
+            numeric_importes = pd.to_numeric(df_spec_prep['Importe DRC'], errors='coerce')
+
+            # 2. Creamos un DataFrame temporal solo con los datos necesarios y limpios.
+            temp_df_for_sum = pd.DataFrame({
+                'proveedor': df_spec_prep[provider_col_name],
+                'importe': numeric_importes
+            }).dropna() # Eliminamos filas donde la conversión a número falló.
+
+            if not temp_df_for_sum.empty:
+                # 3. Realizamos la suma sobre el DataFrame limpio. El resultado SERÁ numérico.
+                provider_sums = temp_df_for_sum.groupby('proveedor')['importe'].sum()
+
+                # 4. AHORA .nlargest() funcionará. Obtenemos el índice (nombres de proveedores).
+                top_providers_by_value = provider_sums.nlargest(15).index
+                
+                # El resto del código continúa desde aquí, usando 'top_providers_by_value'
                 spec_df_focus = df_spec_prep[df_spec_prep[provider_col_name].isin(top_providers_by_value)]
                 provider_specialization_list = []
                 for provider in top_providers_by_value:
@@ -859,8 +925,11 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, selected_estado)
                         labels={'Frecuencia': 'Frecuencia del Término Principal', 'Proveedor': ''}
                     )
                     fig_spec.update_layout(xaxis={'categoryorder': 'total descending'})
+            # --- FIN DE LA SOLUCIÓN DEFINITIVA ---
 
+    # --- Duración y Tabla (sin cambios) ---
     fig_duration = go.Figure().update_layout(title="No hay datos para duración de contratos")
+    # ... (el resto del código de esta sección no necesita cambios)
     if provider_col_name in filtered_df.columns and 'Duración del contrato (días)' in filtered_df.columns:
         duration_df_prep = filtered_df.dropna(subset=[provider_col_name, 'Duración del contrato (días)'])
         if not duration_df_prep.empty:
@@ -910,8 +979,10 @@ def update_tab3(tic_filter, selected_siglas, selected_gobierno, selected_estado)
                 style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#f9f9f9'}],
                 page_size=15
             )
+            
     return fig_share, fig_spec, fig_duration, competitor_table_content
 
+#### Callbacks y funcion de la tercera pestana pero para el despluegie de contratos de la grafica 
 
 @app.callback(
     Output('provider-contracts-table-container', 'children'),
@@ -1012,6 +1083,7 @@ def display_provider_contracts_table(click_data, tic_filter, selected_siglas, se
         table
     ])
 
+#### Callbacks y funcion de la cuarta pestana  ---- Distribucion grafica------
 
 @app.callback(
     [Output('geo-distribution-graph', 'figure'),
@@ -1024,6 +1096,19 @@ def display_provider_contracts_table(click_data, tic_filter, selected_siglas, se
 )
 def update_tab4(tic_filter, selected_siglas, selected_gobierno, selected_estado):
     filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, selected_estado)
+
+    # --- INICIO DE LA SOLUCIÓN ---
+    # Limpiar y convertir 'Importe DRC' a numérico UNA SOLA VEZ al principio del callback.
+    if 'Importe DRC' in filtered_df.columns:
+        filtered_df.loc[:, 'Importe DRC'] = (
+            filtered_df['Importe DRC']
+            .astype(str)
+            .str.replace(r'[\$,]', '', regex=True)
+        )
+        filtered_df.loc[:, 'Importe DRC'] = pd.to_numeric(
+            filtered_df['Importe DRC'], errors='coerce'
+        )
+    # --- FIN DE LA SOLUCIÓN ---
 
     empty_fig_layout = {
         "xaxis": dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -1073,9 +1158,11 @@ def update_tab4(tic_filter, selected_siglas, selected_gobierno, selected_estado)
     # --- fig_gov (Gasto TIC por Orden de Gobierno) ---
     fig_gov = go.Figure().update_layout(title="No hay datos para gasto por orden de gobierno", **empty_fig_layout)
     if 'Orden de gobierno' in filtered_df.columns and 'Importe DRC' in filtered_df.columns:
+        # Esta sección ahora funcionará porque los datos son numéricos.
         gov_spending_prep = filtered_df.dropna(subset=['Importe DRC'])
         if not gov_spending_prep.empty:
             gov_spending = gov_spending_prep.groupby('Orden de gobierno')['Importe DRC'].sum().reset_index().sort_values('Importe DRC', ascending=False)
+            # La comparación '.sum() > 0' ahora es una operación matemática válida.
             if not gov_spending.empty and gov_spending['Importe DRC'].sum() > 0:
                 fig_gov = px.pie(gov_spending, values='Importe DRC', names='Orden de gobierno', title="Distribución del Gasto TIC por Orden de Gobierno", hole=0.4)
             else:
@@ -1106,6 +1193,7 @@ def update_tab4(tic_filter, selected_siglas, selected_gobierno, selected_estado)
 
     return fig_geo, fig_gov, fig_proc
 
+##### Callbacks y funcion de la quinta pestana ------Analisis de terminos y Marcas TIC-----
 
 @app.callback(
     [Output('top-terms-graph', 'figure'),
@@ -1119,6 +1207,20 @@ def update_tab4(tic_filter, selected_siglas, selected_gobierno, selected_estado)
 )
 def update_tab5(tic_filter, selected_siglas, selected_gobierno, selected_estado):
     filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, selected_estado)
+
+    # --- INICIO DE LA SOLUCIÓN ---
+    # Limpiar y convertir 'Importe DRC' a numérico UNA SOLA VEZ al principio.
+    # Esto soluciona todos los problemas de tipo de dato en esta pestaña.
+    if 'Importe DRC' in filtered_df.columns:
+        filtered_df.loc[:, 'Importe DRC'] = (
+            filtered_df['Importe DRC']
+            .astype(str)
+            .str.replace(r'[\$,]', '', regex=True)
+        )
+        filtered_df.loc[:, 'Importe DRC'] = pd.to_numeric(
+            filtered_df['Importe DRC'], errors='coerce'
+        )
+    # --- FIN DE LA SOLUCIÓN ---
 
     empty_fig_layout_base = dict(
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -1222,6 +1324,7 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, selected_estado)
     else:
         fig_top_marcas.update_layout(title="Columna 'marca_tic' no encontrada")
 
+    # Esta sección ahora funcionará porque 'Importe DRC' ya es numérica.
     if 'terminos_positivos' in filtered_df.columns and 'Importe DRC' in filtered_df.columns:
         if all_terms_flat:
             value_term_base = filtered_df[['terminos_positivos', 'Importe DRC']].copy()
@@ -1231,6 +1334,7 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, selected_estado)
                 value_term_exploded = value_term_base.explode('terminos_positivos')
                 value_term_exploded = value_term_exploded[value_term_exploded['terminos_positivos'].apply(lambda x: isinstance(x, str) and x.strip() != "")]
                 if not value_term_exploded.empty:
+                    # La operación .agg() ahora funcionará correctamente.
                     term_value_agg = value_term_exploded.groupby('terminos_positivos', observed=True)['Importe DRC'].agg(['mean', 'count']).reset_index()
                     term_value_agg.rename(columns={'mean': 'Valor Promedio', 'count': 'Num Contratos', 'terminos_positivos': 'Término'}, inplace=True)
                     term_value_filtered_plot = term_value_agg[term_value_agg['Num Contratos'] >= 1].sort_values('Valor Promedio', ascending=False).head(15)
@@ -1258,13 +1362,14 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, selected_estado)
 
     for fig in [fig_terms, fig_trend, fig_top_marcas, fig_value_term]:
         if not fig.data:
-            if "Cargando" in (fig.layout.title.text if fig.layout.title else ""): # type: ignore
+            if "Cargando" in (fig.layout.title.text if fig.layout.title else ""):
                 fig.update_layout(title="No hay datos disponibles para este gráfico", **empty_fig_layout_base)
-            else: # Title was already set to a specific error/info message
-                fig.update_layout(**empty_fig_layout_base) # Ensure empty layout is applied
+            else:
+                fig.update_layout(**empty_fig_layout_base)
 
     return fig_terms, fig_trend, fig_top_marcas, fig_value_term
 
+#### Callbacks y funcion de la sexta pestana ------Redes de Contratacion---------
 
 @app.callback(
     Output('network-graph', 'figure'),
@@ -1275,6 +1380,21 @@ def update_tab5(tic_filter, selected_siglas, selected_gobierno, selected_estado)
 )
 def update_tab_network(tic_filter, selected_siglas, selected_gobierno, selected_estado):
     filtered_df = filter_dataframe(df, tic_filter, selected_siglas, selected_gobierno, selected_estado)
+
+    # --- INICIO DE LA SOLUCIÓN ---
+    # Limpiar y convertir 'Importe DRC' a numérico al principio del callback.
+    # Esto es necesario para que la suma de los importes sea matemática.
+    if 'Importe DRC' in filtered_df.columns:
+        filtered_df.loc[:, 'Importe DRC'] = (
+            filtered_df['Importe DRC']
+            .astype(str)
+            .str.replace(r'[\$,]', '', regex=True)
+        )
+        filtered_df.loc[:, 'Importe DRC'] = pd.to_numeric(
+            filtered_df['Importe DRC'], errors='coerce'
+        )
+    # --- FIN DE LA SOLUCIÓN ---
+
     empty_network_fig_layout = {
         "title": "No hay datos suficientes para crear la red", "showlegend": False,
         "xaxis": {"showgrid": False, "zeroline": False, "showticklabels": False},
@@ -1287,6 +1407,7 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, selected_
        'Siglas de la Institución' not in filtered_df.columns:
         return go.Figure().update_layout(**empty_network_fig_layout)
 
+    # Esta lógica ahora funcionará correctamente
     link_col = 'Importe DRC' if 'Importe DRC' in filtered_df.columns and filtered_df['Importe DRC'].notna().any() else 'Código del contrato'
     agg_func = 'sum' if link_col == 'Importe DRC' else 'count'
 
@@ -1295,6 +1416,7 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, selected_
         empty_network_fig_layout["title"] = "No hay datos válidos (proveedor, institución, valor/conteo) para generar la red"
         return go.Figure().update_layout(**empty_network_fig_layout)
 
+    # La agregación .agg() ahora producirá una columna 'weight' numérica
     edges_df = network_data_prep.groupby(['Proveedor o contratista', 'Siglas de la Institución']).agg(weight=(link_col, agg_func)).reset_index()
     top_n = 50
     edges_df = edges_df.sort_values('weight', ascending=False).head(top_n)
@@ -1306,11 +1428,10 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, selected_
     proveedores_nodes = pd.unique(edges_df['Proveedor o contratista'])
     instituciones_nodes = pd.unique(edges_df['Siglas de la Institución'])
     all_graph_nodes = pd.unique(np.concatenate([proveedores_nodes, instituciones_nodes]))
-    # node_map = {name: i for i, name in enumerate(all_graph_nodes)} # Not directly used
 
     node_types_map = {p: 'Proveedor' for p in proveedores_nodes}
     for i_node in instituciones_nodes:
-        if i_node not in node_types_map:  # Avoid overwriting if an entity is both
+        if i_node not in node_types_map:
             node_types_map[i_node] = 'Institución'
 
     num_graph_nodes = len(all_graph_nodes)
@@ -1324,6 +1445,7 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, selected_
     node_positions = {name: (pos_x[i], pos_y[i]) for i, name in enumerate(all_graph_nodes)}
 
     fig_network = go.Figure()
+    # min_w y max_w ahora serán números
     min_w, max_w = edges_df['weight'].min(), edges_df['weight'].max()
 
     for _, row in edges_df.iterrows():
@@ -1334,9 +1456,10 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, selected_
         x0, y0 = node_positions[prov_name]
         x1, y1 = node_positions[inst_name]
         line_width = 1
-        if max_w > min_w and max_w > 0: # Avoid division by zero if max_w == min_w
+        # Esta comparación ahora es válida
+        if max_w > min_w and max_w > 0:
             line_width = 1 + 4 * (row['weight'] - min_w) / (max_w - min_w)
-        elif max_w == min_w and max_w > 0: # All weights are same and non-zero
+        elif max_w == min_w and max_w > 0:
             line_width = 2
         weight_label = f"${row['weight']:,.2f}" if link_col == 'Importe DRC' else f"{int(row['weight'])} contratos"
         fig_network.add_trace(go.Scatter(
@@ -1380,6 +1503,7 @@ def update_tab_network(tic_filter, selected_siglas, selected_gobierno, selected_
     )
     return fig_network
 
+###### Callbacks  y funcion de la quinta pestana sobre la grafica de terminos 
 
 @app.callback(
     Output('term-contracts-table-container', 'children'),
@@ -1486,6 +1610,7 @@ def display_term_contracts_table(click_data, tic_filter, selected_siglas, select
         table
     ])
 
+##### Callbacks  y funcion de la quinta pestana sobre el grafico de las marcas
 
 @app.callback(
     Output('marca-contracts-table-container', 'children'),
